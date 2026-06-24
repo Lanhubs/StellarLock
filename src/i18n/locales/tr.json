@@ -14,7 +14,9 @@
     "myLocks": "Kilitelerim",
     "explore": "Keşfet",
     "connectWallet": "Cüzdanı Bağla",
-    "disconnectWallet": "Cüzdanı ayır"
+    "disconnectWallet": "Cüzdanı ayır",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat"
   },
   "landing": {
     "badge": "Stellar üzerine inşa edildi · Soroban akıllı sözleşmeleri",

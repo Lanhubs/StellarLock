@@ -14,7 +14,9 @@
     "myLocks": "My Locks",
     "explore": "Explore",
     "connectWallet": "Connect Wallet",
-    "disconnectWallet": "Disconnect wallet"
+    "disconnectWallet": "Disconnect wallet",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "landing": {
     "badge": "Built on Stellar · Soroban smart contracts",

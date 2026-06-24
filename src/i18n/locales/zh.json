@@ -14,7 +14,9 @@
     "myLocks": "我的锁定",
     "explore": "浏览",
     "connectWallet": "连接钱包",
-    "disconnectWallet": "断开钱包"
+    "disconnectWallet": "断开钱包",
+    "openMenu": "打开菜单",
+    "closeMenu": "关闭菜单"
   },
   "landing": {
     "badge": "基于 Stellar 构建 · Soroban 智能合约",

@@ -14,7 +14,9 @@
     "myLocks": "내 잠금",
     "explore": "탐색",
     "connectWallet": "지갑 연결",
-    "disconnectWallet": "지갑 연결 해제"
+    "disconnectWallet": "지갑 연결 해제",
+    "openMenu": "메뉴 열기",
+    "closeMenu": "메뉴 닫기"
   },
   "landing": {
     "badge": "Stellar 기반 · Soroban 스마트 컨트랙트",

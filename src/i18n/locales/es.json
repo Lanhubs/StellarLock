@@ -14,7 +14,9 @@
     "myLocks": "Mis bloqueos",
     "explore": "Explorar",
     "connectWallet": "Conectar billetera",
-    "disconnectWallet": "Desconectar billetera"
+    "disconnectWallet": "Desconectar billetera",
+    "openMenu": "Abrir menú",
+    "closeMenu": "Cerrar menú"
   },
   "landing": {
     "badge": "Construido en Stellar · Contratos inteligentes Soroban",
