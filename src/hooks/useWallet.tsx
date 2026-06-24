@@ -88,7 +88,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         networkPassphrase: NETWORK_PASSPHRASE,
         address,
       })
-      console.log("[signTransaction result]", result)
+      if (import.meta.env.DEV) console.log("[signTransaction result]", result)
       if (result.error) {
         const errMsg = typeof result.error === "string"
           ? result.error

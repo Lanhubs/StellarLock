@@ -68,7 +68,7 @@ export async function simulateCall<T>(
     .build()
 
   const result = await rpc.simulateTransaction(tx)
-  console.log("[simulateCall]", method, result)
+  if (import.meta.env.DEV) console.log("[simulateCall]", method, result)
 
   if (SorobanRpc.Api.isSimulationError(result)) {
     throw new Error(`Simulation error: ${simError(result)}`)
@@ -101,7 +101,7 @@ export async function submitCall(
     .build()
 
   const simResult = await rpc.simulateTransaction(tx)
-  console.log("[submitCall sim]", method, simResult)
+  if (import.meta.env.DEV) console.log("[submitCall sim]", method, simResult)
 
   if (SorobanRpc.Api.isSimulationError(simResult)) {
     throw new Error(`Simulation error: ${simError(simResult)}`)
@@ -114,7 +114,7 @@ export async function submitCall(
   const sendResult = await rpc.sendTransaction(
     TransactionBuilder.fromXDR(signedTxXdr, NETWORK.passphrase),
   )
-  console.log("[submitCall send]", sendResult)
+  if (import.meta.env.DEV) console.log("[submitCall send]", sendResult)
 
   if (sendResult.status === "ERROR") {
     throw new Error(`Send error: ${sendResult.errorResult?.toXDR("base64") ?? "unknown"}`)
@@ -125,7 +125,7 @@ export async function submitCall(
     await new Promise((r) => setTimeout(r, 1500))
     getResult = await rpc.getTransaction(sendResult.hash)
   }
-  console.log("[submitCall result]", getResult)
+  if (import.meta.env.DEV) console.log("[submitCall result]", getResult)
 
   if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
     throw new Error(`Transaction failed: ${JSON.stringify(getResult)}`)

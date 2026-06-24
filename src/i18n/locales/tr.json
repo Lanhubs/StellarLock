@@ -12,6 +12,7 @@
   "nav": {
     "createLock": "Kilit Oluştur",
     "myLocks": "Kilitelerim",
+    "explore": "Keşfet",
     "connectWallet": "Cüzdanı Bağla",
     "disconnectWallet": "Cüzdanı ayır"
   },
@@ -127,6 +128,7 @@
     "beneficiary": "Yararlanıcı",
     "timeRemaining": "Kalan süre",
     "withdraw": "Tokenleri çek",
+    "claimVested": "{{amount}} {{symbol}} talep et (hak edilmiş)",
     "extendLock": "Kilidi uzat",
     "newUnlockDate": "Yeni kilit açma tarihi",
     "extendHint": "Mevcut kilit açma tarihinden sonra olmalıdır. Kilitler yalnızca uzatılabilir, asla kısaltılamaz.",
@@ -156,6 +158,19 @@
     "noLocksTitle": "Kilit bulunamadı",
     "noLocksDesc": "<1>{{query}}</1> için herhangi bir kilit bulamadık. Token sembolünü veya sözleşme adresini kontrol edin veya bu token için ilk kilidi oluşturun.",
     "createLock": "Kilit oluştur"
+  },
+  "discover": {
+    "title": "Kilitleri Keşfet",
+    "subtitle": "StellarLock'taki tüm token ve LP kilitlerini keşfedin.",
+    "recentLocks": "Son Kilitler",
+    "upcomingUnlocks": "Yaklaşan Kilit Açılmaları",
+    "featuredTokens": "Öne Çıkan Tokenler",
+    "totalLocks": "Toplam Kilit",
+    "totalValueLocked": "Toplam Kilitli Değer",
+    "tokensSecured": "Güvence Altına Alınan Tokenler",
+    "viewAll": "Tüm kilitleri görüntüle",
+    "noLocks": "Bu token için kilit bulunamadı.",
+    "searchHint": "Belirli kilitleri bulmak için token sembolü veya sözleşme adresine göre arayın."
   },
   "search": {
     "placeholder": "Sembol veya sözleşme adresine göre token arayın…",

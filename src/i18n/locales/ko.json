@@ -12,6 +12,7 @@
   "nav": {
     "createLock": "잠금 생성",
     "myLocks": "내 잠금",
+    "explore": "탐색",
     "connectWallet": "지갑 연결",
     "disconnectWallet": "지갑 연결 해제"
   },
@@ -127,6 +128,7 @@
     "beneficiary": "수혜자",
     "timeRemaining": "남은 시간",
     "withdraw": "토큰 인출",
+    "claimVested": "{{amount}} {{symbol}} 청구 (베스팅)",
     "extendLock": "잠금 연장",
     "newUnlockDate": "새 잠금 해제 날짜",
     "extendHint": "현재 잠금 해제 날짜보다 늦어야 합니다. 잠금은 연장만 가능하며, 절대 단축할 수 없습니다.",
@@ -156,6 +158,19 @@
     "noLocksTitle": "잠금을 찾을 수 없음",
     "noLocksDesc": "<1>{{query}}</1>에 대한 잠금을 찾을 수 없습니다. 토큰 심볼이나 컨트랙트 주소를 확인하거나, 이 토큰의 첫 번째 잠금을 생성하세요.",
     "createLock": "잠금 생성"
+  },
+  "discover": {
+    "title": "잠금 탐색",
+    "subtitle": "StellarLock의 모든 토큰 및 LP 잠금을 탐색하세요.",
+    "recentLocks": "최근 잠금",
+    "upcomingUnlocks": "다가오는 잠금 해제",
+    "featuredTokens": "주요 토큰",
+    "totalLocks": "총 잠금 수",
+    "totalValueLocked": "총 잠금 가치",
+    "tokensSecured": "보호된 토큰",
+    "viewAll": "모든 잠금 보기",
+    "noLocks": "이 토큰에 대한 잠금을 찾을 수 없습니다.",
+    "searchHint": "토큰 심볼이나 컨트랙트 주소로 특정 잠금을 검색하세요."
   },
   "search": {
     "placeholder": "심볼이나 컨트랙트 주소로 토큰 검색…",

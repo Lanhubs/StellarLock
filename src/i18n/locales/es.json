@@ -12,6 +12,7 @@
   "nav": {
     "createLock": "Crear bloqueo",
     "myLocks": "Mis bloqueos",
+    "explore": "Explorar",
     "connectWallet": "Conectar billetera",
     "disconnectWallet": "Desconectar billetera"
   },
@@ -127,6 +128,7 @@
     "beneficiary": "Beneficiario",
     "timeRemaining": "Tiempo restante",
     "withdraw": "Retirar tokens",
+    "claimVested": "Reclamar {{amount}} {{symbol}} (adquiridos)",
     "extendLock": "Extender bloqueo",
     "newUnlockDate": "Nueva fecha de desbloqueo",
     "extendHint": "Debe ser posterior a la fecha de desbloqueo actual. Los bloqueos solo pueden extenderse, nunca acortarse.",
@@ -156,6 +158,19 @@
     "noLocksTitle": "No se encontraron bloqueos",
     "noLocksDesc": "No pudimos encontrar bloqueos para <1>{{query}}</1>. Verifica el símbolo del token o la dirección del contrato, o crea el primer bloqueo para este token.",
     "createLock": "Crear un bloqueo"
+  },
+  "discover": {
+    "title": "Explorar bloqueos",
+    "subtitle": "Explora todos los bloqueos de tokens y LP en StellarLock.",
+    "recentLocks": "Bloqueos recientes",
+    "upcomingUnlocks": "Próximos desbloqueos",
+    "featuredTokens": "Tokens destacados",
+    "totalLocks": "Total de bloqueos",
+    "totalValueLocked": "Valor total bloqueado",
+    "tokensSecured": "Tokens asegurados",
+    "viewAll": "Ver todos los bloqueos",
+    "noLocks": "No se encontraron bloqueos para este token.",
+    "searchHint": "Busca por símbolo de token o dirección de contrato para encontrar bloqueos específicos."
   },
   "search": {
     "placeholder": "Buscar un token por símbolo o dirección de contrato…",

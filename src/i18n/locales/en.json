@@ -12,6 +12,7 @@
   "nav": {
     "createLock": "Create Lock",
     "myLocks": "My Locks",
+    "explore": "Explore",
     "connectWallet": "Connect Wallet",
     "disconnectWallet": "Disconnect wallet"
   },
@@ -127,6 +128,7 @@
     "beneficiary": "Beneficiary",
     "timeRemaining": "Time remaining",
     "withdraw": "Withdraw tokens",
+    "claimVested": "Claim {{amount}} {{symbol}} (vested)",
     "extendLock": "Extend lock",
     "newUnlockDate": "New unlock date",
     "extendHint": "Must be later than the current unlock date. Locks can only be extended, never shortened.",
@@ -156,6 +158,19 @@
     "noLocksTitle": "No locks found",
     "noLocksDesc": "We couldn't find any locks for <1>{{query}}</1>. Double-check the token symbol or contract address, or create the first lock for this token.",
     "createLock": "Create a lock"
+  },
+  "discover": {
+    "title": "Explore Locks",
+    "subtitle": "Browse all token and LP locks on StellarLock.",
+    "recentLocks": "Recent Locks",
+    "upcomingUnlocks": "Upcoming Unlocks",
+    "featuredTokens": "Featured Tokens",
+    "totalLocks": "Total Locks",
+    "totalValueLocked": "Total Value Locked",
+    "tokensSecured": "Tokens Secured",
+    "viewAll": "View all locks",
+    "noLocks": "No locks found for this token.",
+    "searchHint": "Search by token symbol or contract address to find specific locks."
   },
   "search": {
     "placeholder": "Search a token by symbol or contract address…",

@@ -11,6 +11,7 @@ export function Navbar() {
   const location = useLocation()
 
   const navLinks = [
+    { to: "/explore", label: t("nav.explore") },
     { to: "/app/create", label: t("nav.createLock") },
     { to: "/app/locks", label: t("nav.myLocks") },
   ]

@@ -12,6 +12,7 @@
   "nav": {
     "createLock": "创建锁定",
     "myLocks": "我的锁定",
+    "explore": "浏览",
     "connectWallet": "连接钱包",
     "disconnectWallet": "断开钱包"
   },
@@ -127,6 +128,7 @@
     "beneficiary": "受益人",
     "timeRemaining": "剩余时间",
     "withdraw": "提取代币",
+    "claimVested": "领取 {{amount}} {{symbol}}（已归属）",
     "extendLock": "延长锁定",
     "newUnlockDate": "新解锁日期",
     "extendHint": "必须晚于当前解锁日期。锁定只能延长，不能缩短。",
@@ -156,6 +158,19 @@
     "noLocksTitle": "未找到锁定",
     "noLocksDesc": "未找到 <1>{{query}}</1> 的任何锁定。请检查代币符号或合约地址，或为此代币创建第一个锁定。",
     "createLock": "创建锁定"
+  },
+  "discover": {
+    "title": "浏览锁定",
+    "subtitle": "浏览 StellarLock 上的所有代币和 LP 锁定。",
+    "recentLocks": "最近锁定",
+    "upcomingUnlocks": "即将解锁",
+    "featuredTokens": "热门代币",
+    "totalLocks": "总锁定数",
+    "totalValueLocked": "总锁定价值",
+    "tokensSecured": "已保护代币",
+    "viewAll": "查看所有锁定",
+    "noLocks": "未找到此代币的锁定。",
+    "searchHint": "按代币符号或合约地址搜索特定锁定。"
   },
   "search": {
     "placeholder": "通过符号或合约地址搜索代币…",

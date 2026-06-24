@@ -77,7 +77,22 @@ function LockDetailView({ lock, onChange }: { lock: Lock; onChange: () => void }
   const now = Date.now()
   const isBeneficiary = address === lock.beneficiary
   const isCreator = address === lock.creator
-  const canWithdraw = isBeneficiary && lock.unlockAt <= now && lock.status !== "withdrawn"
+
+  const vestingClaimable = lock.vesting
+    ? Math.max(
+        0,
+        lock.amount *
+          Math.max(0, Math.min(now, lock.vesting.end) - lock.vesting.start) /
+          Math.max(1, lock.vesting.end - lock.vesting.start) -
+          lock.vesting.released,
+      )
+    : 0
+
+  const canWithdraw =
+    isBeneficiary &&
+    lock.status !== "withdrawn" &&
+    lock.unlockAt <= now &&
+    (lock.vesting ? vestingClaimable > 0 : true)
   const canExtend = isCreator && lock.status !== "withdrawn"
   const canTransfer = isBeneficiary && lock.status !== "withdrawn"
 
@@ -254,7 +269,7 @@ function LockDetailView({ lock, onChange }: { lock: Lock; onChange: () => void }
               </div>
               <div className="rounded-lg bg-secondary/30 p-3 text-center">
                 <p className="text-xs text-muted-foreground">Claimable</p>
-                <p className="font-semibold tabular-nums text-primary">{formatAmount(Math.max(0, (lock.amount * Math.min(now, lock.vesting.end) - lock.vesting.start) / Math.max(1, lock.vesting.end - lock.vesting.start)))} {lock.token.symbol}</p>
+                <p className="font-semibold tabular-nums text-primary">{formatAmount(vestingClaimable)} {lock.token.symbol}</p>
               </div>
             </div>
           </div>
@@ -268,7 +283,9 @@ function LockDetailView({ lock, onChange }: { lock: Lock; onChange: () => void }
             {canWithdraw && (
               <Button onClick={handleWithdraw} loading={busy === "withdraw"} className="flex-1">
                 <LockIcon className="h-4 w-4" />
-                {t("lockDetail.withdraw")}
+                {lock.vesting
+                  ? t("lockDetail.claimVested", { amount: formatAmount(vestingClaimable), symbol: lock.token.symbol })
+                  : t("lockDetail.withdraw")}
               </Button>
             )}
             {canExtend && (
