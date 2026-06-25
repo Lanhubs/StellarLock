@@ -3,6 +3,7 @@ import { Lock } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Navbar } from "@/components/layout/Navbar"
 import { WalletAlerts } from "@/components/layout/WalletAlerts"
+import { NETWORK } from "@/lib/stellar"
 
 export function Layout() {
   const { t } = useTranslation()
@@ -45,7 +46,9 @@ function Footer() {
           <Link to="/app/locks" className="hover:text-foreground">
             {t("nav.myLocks")}
           </Link>
-          <span className="rounded-md border border-border px-2 py-0.5 text-xs">{t("common.testnet")}</span>
+          <span className="rounded-md border border-border px-2 py-0.5 text-xs">
+            {t(`common.${NETWORK.id}`)}
+          </span>
         </div>
       </div>
     </footer>

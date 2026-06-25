@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom"
 import { Lock, Wallet, LogOut, Menu, X } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useWallet } from "@/hooks/useWallet"
+import { NETWORK } from "@/lib/stellar"
 import { Button } from "@/components/ui/Button"
 import { shortAddress, cn } from "@/lib/utils"
 
@@ -54,6 +55,9 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <span className="hidden rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground sm:inline-flex">
+            {NETWORK.displayName}
+          </span>
           {isConnected ? (
             <div className="flex items-center gap-2">
               <span className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium sm:flex">
