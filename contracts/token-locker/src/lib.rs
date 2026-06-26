@@ -1,4 +1,8 @@
 #![no_std]
+
+#[cfg(test)]
+mod tests;
+
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, token, vec,
     Address, Env, Vec, Symbol,
@@ -24,6 +28,9 @@ pub enum DataKey {
     ByCreator(Address),
     ByBeneficiary(Address),
     ByToken(Address),
+    TotalLocked(Address),
+    GlobalLockCount,
+    UniqueTokenCount,
 }
 
 // ── Error types ───────────────────────────────────────────────────────────────
@@ -41,6 +48,13 @@ pub enum ContractError {
 }
 
 // ── On-chain types ────────────────────────────────────────────────────────────
+
+#[contracttype]
+#[derive(Clone)]
+pub struct GlobalStats {
+    pub total_lock_count: u64,
+    pub unique_token_count: u64,
+}
 
 #[contracttype]
 #[derive(Clone)]
@@ -181,18 +195,28 @@ impl TokenLocker {
         };
 
         save_lock(&env, &lock);
-        push_index(&env, DataKey::ByCreator(creator), id);
-        push_index(&env, DataKey::ByBeneficiary(beneficiary), id);
-        push_index(&env, DataKey::ByToken(token), id);
+        push_index(&env, DataKey::ByCreator(creator.clone()), id);
+        push_index(&env, DataKey::ByBeneficiary(beneficiary.clone()), id);
+        push_index(&env, DataKey::ByToken(token.clone()), id);
+
+        // Update per-token TVL and global stats
+        let current_tvl: i128 = env.storage().persistent().get(&DataKey::TotalLocked(token.clone())).unwrap_or(0);
+        if current_tvl == 0 {
+            let unique_count: u64 = env.storage().persistent().get(&DataKey::UniqueTokenCount).unwrap_or(0);
+            env.storage().persistent().set(&DataKey::UniqueTokenCount, &(unique_count + 1));
+        }
+        env.storage().persistent().set(&DataKey::TotalLocked(token.clone()), &(current_tvl + amount));
+        let lock_count: u64 = env.storage().persistent().get(&DataKey::GlobalLockCount).unwrap_or(0);
+        env.storage().persistent().set(&DataKey::GlobalLockCount, &(lock_count + 1));
 
         env.events().publish(
             (
                 Symbol::new(&env, "lock_created"),
                 id,
-                creator.clone(),
-                token.clone(),
+                creator,
+                token,
                 amount,
-                beneficiary.clone(),
+                beneficiary,
                 unlock_at,
             ),
             (),
@@ -237,6 +261,11 @@ impl TokenLocker {
             &lock.beneficiary,
             &releasable,
         );
+
+        // Decrement TVL
+        let current_tvl: i128 = env.storage().persistent().get(&DataKey::TotalLocked(lock.token.clone())).unwrap_or(0);
+        let new_tvl = (current_tvl - releasable).max(0);
+        env.storage().persistent().set(&DataKey::TotalLocked(lock.token.clone()), &new_tvl);
 
         let fully_withdrawn = lock.vesting.as_ref().map_or(true, |v| v.released >= lock.amount);
         if fully_withdrawn {
@@ -356,5 +385,15 @@ impl TokenLocker {
 
     pub fn get_lock_count_by_token(env: Env, token: Address) -> u32 {
         get_index(&env, DataKey::ByToken(token)).len()
+    }
+
+    pub fn get_total_locked(env: Env, token: Address) -> i128 {
+        env.storage().persistent().get(&DataKey::TotalLocked(token)).unwrap_or(0)
+    }
+
+    pub fn get_global_stats(env: Env) -> GlobalStats {
+        let total_lock_count: u64 = env.storage().persistent().get(&DataKey::GlobalLockCount).unwrap_or(0);
+        let unique_token_count: u64 = env.storage().persistent().get(&DataKey::UniqueTokenCount).unwrap_or(0);
+        GlobalStats { total_lock_count, unique_token_count }
     }
 }
