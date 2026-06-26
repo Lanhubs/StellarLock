@@ -202,5 +202,22 @@
     "unlocksIn": "解锁倒计时",
     "lock": "锁定 #{{id}}",
     "view": "查看"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "myLocks": "My Locks",
+    "lockId": "Lock #{{id}}",
+    "discover": "Discover",
+    "createLock": "Create Lock"
+  "costEstimate": {
+    "title": "Estimated Costs",
+    "networkFee": "Transaction fee",
+    "storageFee": "Storage deposit",
+    "total": "Total",
+    "tooltip": "Soroban requires a refundable storage deposit to rent on-chain state. This deposit is separate from the transaction fee.",
+    "highCostWarning": "Unusually high storage cost",
+    "estimating": "Estimating costs…",
+    "error": "Unable to estimate cost",
+    "unit": "XLM"
   }
 }

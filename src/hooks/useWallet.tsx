@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, u
 import { getAddress, getNetwork, isConnected, requestAccess, signTransaction as freighterSignTx } from "@stellar/freighter-api"
 import { trackEvent } from "@/lib/analytics"
 import { NETWORK } from "@/lib/stellar"
+import { notify } from "../lib/utils"
 
 const STORAGE_KEY = "stellarlock:wallet"
 const CONNECTION_CHECK_INTERVAL = 10_000
@@ -125,7 +126,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const connected = await isConnected()
       if (!connected.isConnected) {
-        alert("Freighter extension not found. Please install it from freighter.app")
+        notify.error("Freighter extension not found. Please install it from freighter.app")
         return
       }
 

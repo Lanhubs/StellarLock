@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react"
 import { Link, NavLink, useLocation } from "react-router-dom"
-import { Lock, Wallet, LogOut, Menu, X } from "lucide-react"
+import { Lock, Wallet, LogOut, Menu, X, Sun, Moon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useWallet } from "@/hooks/useWallet"
 import { NETWORK } from "@/lib/stellar"
+import { useTheme } from "@/hooks/useTheme"
 import { Button } from "@/components/ui/Button"
 import { NotificationCenter } from "@/components/ui/NotificationCenter"
 import { shortAddress, cn } from "@/lib/utils"
@@ -11,6 +12,7 @@ import { shortAddress, cn } from "@/lib/utils"
 export function Navbar() {
   const { t } = useTranslation()
   const { address, isConnected, connecting, connect, disconnect } = useWallet()
+  const { theme, toggleTheme } = useTheme()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -41,6 +43,7 @@ export function Navbar() {
             <NavLink
               key={link.to}
               to={link.to}
+              to={link.to}
               className={({ isActive }) =>
                 cn(
                   "rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -59,6 +62,17 @@ export function Navbar() {
           <span className="hidden rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground sm:inline-flex">
             {NETWORK.displayName}
           </span>
+          {/* Accessible Theme Toggle Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+
           {isConnected ? (
             <>
               <NotificationCenter />

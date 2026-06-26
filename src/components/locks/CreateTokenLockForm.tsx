@@ -2,14 +2,18 @@ import { useMemo, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { Lock, Info, Loader2, Calendar } from "lucide-react"
 import { Trans, useTranslation } from "react-i18next"
+import { Address, nativeToScVal, xdr } from "@stellar/stellar-sdk"
 import { Input, Label } from "@/components/ui/Input"
 import { Button } from "@/components/ui/Button"
 import { useWallet } from "@/hooks/useWallet"
 import { useTokenBalance } from "@/hooks/useLocks"
 import { createTokenLock } from "@/lib/token-locker"
 import { trackEvent } from "@/lib/analytics"
+import { formatDate, formatError, isValidStellarAddress } from "@/lib/utils"
 import { formatDate } from "@/lib/utils"
+import { CONTRACTS } from "@/lib/stellar"
 import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
+import { CostEstimate } from "@/components/locks/CostEstimate"
 
 const DAY = 86_400_000
 
@@ -59,7 +63,46 @@ export function CreateTokenLockForm() {
   const minDate = useMemo(() => new Date(Date.now() + DAY).toISOString().slice(0, 10), [])
   const unlockTs = unlockDate ? new Date(unlockDate).getTime() : 0
   const vestingStartTs = vestingStartDate ? new Date(vestingStartDate).getTime() : 0
-  const valid = tokenAddress.trim().length > 4 && Number(amount) > 0 && unlockTs > Date.now()
+  const valid = isValidStellarAddress(tokenAddress.trim()) && Number(amount) > 0 && unlockTs > Date.now()
+
+  // Build the contract args for cost estimation when form is sufficiently filled in
+  const costArgs = useMemo((): xdr.ScVal[] | null => {
+    try {
+      if (!validTokenAddress || !address || Number(amount) <= 0 || unlockTs <= Date.now()) return null
+      const beneficiaryAddr = beneficiary.trim().length > 0 ? beneficiary.trim() : address
+      const amountStroops = BigInt(Math.round(Number(amount) * 1e7))
+      const args: xdr.ScVal[] = [
+        new Address(address).toScVal(),
+        new Address(validTokenAddress).toScVal(),
+        nativeToScVal(amountStroops, { type: "i128" }),
+        new Address(beneficiaryAddr).toScVal(),
+        nativeToScVal(BigInt(Math.floor(unlockTs / 1000)), { type: "u64" }),
+      ]
+      if (vesting) {
+        args.push(
+          xdr.ScVal.scvMap([
+            new xdr.ScMapEntry({
+              key: xdr.ScVal.scvSymbol("end"),
+              val: nativeToScVal(BigInt(Math.floor(unlockTs / 1000)), { type: "u64" }),
+            }),
+            new xdr.ScMapEntry({
+              key: xdr.ScVal.scvSymbol("released"),
+              val: nativeToScVal(BigInt(0), { type: "i128" }),
+            }),
+            new xdr.ScMapEntry({
+              key: xdr.ScVal.scvSymbol("start"),
+              val: nativeToScVal(BigInt(Math.floor(Date.now() / 1000)), { type: "u64" }),
+            }),
+          ]),
+        )
+      } else {
+        args.push(xdr.ScVal.scvVoid())
+      }
+      return args
+    } catch {
+      return null
+    }
+  }, [validTokenAddress, address, amount, beneficiary, unlockTs, vesting])
 
   function applyPreset(days: number) {
     setUnlockDate(new Date(Date.now() + days * DAY).toISOString().slice(0, 10))
@@ -111,13 +154,7 @@ export function CreateTokenLockForm() {
     } catch (err: unknown) {
       console.error("[createLock error]", err)
       setShowConfirm(false)
-      if (err instanceof Error) {
-        setError(err.message)
-      } else if (typeof err === "object" && err !== null) {
-        setError(JSON.stringify(err, null, 2))
-      } else {
-        setError(String(err))
-      }
+      setError(formatError(err))
     } finally {
       setSubmitting(false)
     }
@@ -309,6 +346,12 @@ export function CreateTokenLockForm() {
           </div>
         )}
       </div>
+
+      <CostEstimate
+        contractId={CONTRACTS.tokenLocker}
+        method="create_lock"
+        args={costArgs}
+      />
 
       <Button type="submit" size="lg" loading={submitting} disabled={!valid}>
         <Lock className="h-4 w-4" />
