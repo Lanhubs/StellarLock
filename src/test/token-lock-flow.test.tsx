@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { render } from "./utils"
 import { CreateTokenLockForm } from "@/components/locks/CreateTokenLockForm"
-import { mockWallet, mockLock } from "./mocks"
+import { mockWallet, VALID_CONTRACT_ADDRESS, VALID_PUBLIC_KEY } from "./mocks"
 
 // Mock the wallet context
 vi.mock("@/hooks/useWallet", () => ({
@@ -51,7 +51,7 @@ describe("Token Lock Creation Flow", () => {
 
     // Fill token address
     const tokenInput = screen.getByPlaceholderText(/token/i)
-    await user.type(tokenInput, "CBVOBNRDOMUMERKKXKYY3NHE4HHE4AQIZVMWUNUZKXNQPQHCSIKUBVJZ")
+    await user.type(tokenInput, VALID_CONTRACT_ADDRESS)
     expect(submitButton).toBeDisabled() // Still need amount and date
 
     // Fill amount
@@ -100,7 +100,7 @@ describe("Token Lock Creation Flow", () => {
     render(<CreateTokenLockForm />)
 
     const tokenInput = screen.getByPlaceholderText(/token/i)
-    await user.type(tokenInput, "CBVOBNRDOMUMERKKXKYY3NHE4HHE4AQIZVMWUNUZKXNQPQHCSIKUBVJZ")
+    await user.type(tokenInput, VALID_CONTRACT_ADDRESS)
 
     await waitFor(() => {
       expect(screen.getByText(/balance.*5000/i)).toBeInTheDocument()
@@ -119,7 +119,7 @@ describe("Token Lock Creation Flow", () => {
     render(<CreateTokenLockForm />)
 
     const beneficiaryInput = screen.getByLabelText(/beneficiary/i)
-    const customBeneficiary = "GBRPYHIL2CI3WHZDTOOQFC6EB4KJJGUJMXQMGJGH3ZLNDU2TCAEUZX3"
+    const customBeneficiary = VALID_PUBLIC_KEY
 
     await user.type(beneficiaryInput, customBeneficiary)
     expect(beneficiaryInput).toHaveValue(customBeneficiary)
@@ -164,7 +164,7 @@ describe("Token Lock Creation Flow", () => {
     const amountInput = amountInputs[0]
     const dateInput = screen.getByLabelText(/unlock date/i) as HTMLInputElement
 
-    await user.type(tokenInput, "CBVOBNRDOMUMERKKXKYY3NHE4HHE4AQIZVMWUNUZKXNQPQHCSIKUBVJZ")
+    await user.type(tokenInput, VALID_CONTRACT_ADDRESS)
     await user.type(amountInput, "100")
 
     const futureDate = new Date()
@@ -194,7 +194,7 @@ describe("Token Lock Creation Flow", () => {
     const amountInput = amountInputs[0]
     const dateInput = screen.getByLabelText(/unlock date/i) as HTMLInputElement
 
-    await user.type(tokenInput, "CBVOBNRDOMUMERKKXKYY3NHE4HHE4AQIZVMWUNUZKXNQPQHCSIKUBVJZ")
+    await user.type(tokenInput, VALID_CONTRACT_ADDRESS)
     await user.type(amountInput, "100")
 
     const futureDate = new Date()
@@ -225,7 +225,7 @@ describe("Token Lock Creation Flow", () => {
     const amountInput = amountInputs[0]
     const dateInput = screen.getByLabelText(/unlock date/i) as HTMLInputElement
 
-    await user.type(tokenInput, "CBVOBNRDOMUMERKKXKYY3NHE4HHE4AQIZVMWUNUZKXNQPQHCSIKUBVJZ")
+    await user.type(tokenInput, VALID_CONTRACT_ADDRESS)
     await user.type(amountInput, "100")
 
     const futureDate = new Date()

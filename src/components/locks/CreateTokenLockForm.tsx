@@ -10,6 +10,7 @@ import { createTokenLock } from "@/lib/token-locker"
 import { trackEvent } from "@/lib/analytics"
 import { formatDate } from "@/lib/utils"
 import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
+import { isValidStellarAddress, isValidStellarContractAddress } from "@/lib/stellar"
 
 const DAY = 86_400_000
 
@@ -45,8 +46,10 @@ export function CreateTokenLockForm() {
     quarterly: { label: t("tokenForm.vestingTemplateQuarterly"), durationMonths: 12, releases: 4 },
   }
 
-  const validTokenAddress =
-    tokenAddress.trim().length === 56 && tokenAddress.trim().startsWith("C") ? tokenAddress.trim() : undefined
+  const trimmedTokenAddress = tokenAddress.trim()
+  const trimmedBeneficiary = beneficiary.trim()
+  const effectiveBeneficiary = trimmedBeneficiary || address || ""
+  const validTokenAddress = isValidStellarContractAddress(trimmedTokenAddress) ? trimmedTokenAddress : undefined
   const { data: balance, loading: balanceLoading } = useTokenBalance(validTokenAddress, address ?? null)
 
   const presets = [
@@ -59,7 +62,9 @@ export function CreateTokenLockForm() {
   const minDate = useMemo(() => new Date(Date.now() + DAY).toISOString().slice(0, 10), [])
   const unlockTs = unlockDate ? new Date(unlockDate).getTime() : 0
   const vestingStartTs = vestingStartDate ? new Date(vestingStartDate).getTime() : 0
-  const valid = tokenAddress.trim().length > 4 && Number(amount) > 0 && unlockTs > Date.now()
+  const tokenAddressValid = isValidStellarContractAddress(trimmedTokenAddress)
+  const beneficiaryValid = isValidStellarAddress(effectiveBeneficiary)
+  const valid = tokenAddressValid && beneficiaryValid && Number(amount) > 0 && unlockTs > Date.now()
 
   function applyPreset(days: number) {
     setUnlockDate(new Date(Date.now() + days * DAY).toISOString().slice(0, 10))
@@ -134,6 +139,7 @@ export function CreateTokenLockForm() {
           value={tokenAddress}
           onChange={(e) => setTokenAddress(e.target.value)}
           className="font-mono"
+          aria-invalid={!!trimmedTokenAddress && !tokenAddressValid}
         />
         <p className="text-xs text-muted-foreground">{t("tokenForm.tokenHint")}</p>
       </div>
@@ -184,6 +190,7 @@ export function CreateTokenLockForm() {
           placeholder={address ?? "G…"}
           value={beneficiary}
           onChange={(e) => setBeneficiary(e.target.value)}
+          aria-invalid={!!trimmedBeneficiary && !beneficiaryValid}
         />
         <p className="text-xs text-muted-foreground">{t("tokenForm.beneficiaryHint")}</p>
       </div>

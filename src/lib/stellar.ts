@@ -5,6 +5,7 @@ import {
   rpc as SorobanRpc,
   TransactionBuilder,
   BASE_FEE,
+  StrKey,
   scValToNative,
   xdr,
 } from "@stellar/stellar-sdk"
@@ -128,6 +129,21 @@ export async function submitCall(
   if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
     throw new Error(`Transaction failed: ${JSON.stringify(getResult)}`)
   }
+}
+
+// ── Address helpers ─────────────────────────────────────────────────────────
+
+export function isValidStellarContractAddress(address: string): boolean {
+  return StrKey.isValidContract(address.trim())
+}
+
+export function isValidStellarPublicKey(address: string): boolean {
+  return StrKey.isValidEd25519PublicKey(address.trim())
+}
+
+export function isValidStellarAddress(address: string): boolean {
+  const trimmed = address.trim()
+  return StrKey.isValidEd25519PublicKey(trimmed) || StrKey.isValidContract(trimmed)
 }
 
 // ── Token helpers ────────────────────────────────────────────────────────────
