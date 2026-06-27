@@ -228,6 +228,7 @@
     "discover": "Discover",
     "createLock": "Create Lock",
     "history": "Transaction History"
+    "createLock": "Create Lock"
   },
   "costEstimate": {
     "title": "Estimated Costs",

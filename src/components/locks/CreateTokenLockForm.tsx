@@ -1,16 +1,20 @@
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState, useEffect, useRef, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { Lock, Info, Loader2, Calendar, Users } from "lucide-react"
+import { Lock, Info, Loader2, Calendar, Timer } from "lucide-react"
 import { Trans, useTranslation } from "react-i18next"
 import { Address, nativeToScVal, xdr } from "@stellar/stellar-sdk"
 import { Input, Label } from "@/components/ui/Input"
 import { Button } from "@/components/ui/Button"
+import { TxProgressSteps } from "@/components/ui/TxProgressSteps"
 import { useWallet } from "@/hooks/useWallet"
 import { useTokenBalance } from "@/hooks/useLocks"
 import { createTokenLock } from "@/lib/token-locker"
 import { createSplitLock, type SplitBeneficiary } from "@/lib/split-lock"
 import { trackEvent } from "@/lib/analytics"
 import { cn, formatDate, formatError, isValidStellarAddress } from "@/lib/utils"
+import { formatDate, formatError, isValidStellarAddress } from "@/lib/utils"
+import { CONTRACTS, type TxPhase } from "@/lib/stellar"
 import { CONTRACTS } from "@/lib/stellar"
 import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
 import { CostEstimate } from "@/components/locks/CostEstimate"
@@ -39,6 +43,7 @@ export function CreateTokenLockForm() {
   const [vestingTemplate, setVestingTemplate] = useState<VestingTemplate>("none")
   const [vestingStartDate, setVestingStartDate] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [txPhase, setTxPhase] = useState<TxPhase | "idle">("idle")
   const [error, setError] = useState<string | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
   const [multiMode, setMultiMode] = useState(false)
@@ -46,6 +51,39 @@ export function CreateTokenLockForm() {
     { address: "", shareBps: 5000 },
     { address: "", shareBps: 5000 },
   ])
+  const [cooldownRemaining, setCooldownRemaining] = useState(0)
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const COOLDOWN_SECONDS = 60
+  const COOLDOWN_KEY = "stellarlock:last_lock_created_at"
+
+  useEffect(() => {
+    const stored = localStorage.getItem(COOLDOWN_KEY)
+    if (stored) {
+      const elapsed = Math.floor((Date.now() - Number(stored)) / 1000)
+      const remaining = COOLDOWN_SECONDS - elapsed
+      if (remaining > 0) setCooldownRemaining(remaining)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (cooldownRemaining <= 0) {
+      if (cooldownRef.current) clearInterval(cooldownRef.current)
+      return
+    }
+    cooldownRef.current = setInterval(() => {
+      setCooldownRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current)
+    }
+  }, [cooldownRemaining])
 
   const vestingTemplates: Record<VestingTemplate, VestingTemplateConfig> = {
     none: { label: t("tokenForm.vestingTemplateCustom") },
@@ -152,6 +190,7 @@ export function CreateTokenLockForm() {
 
   async function confirmLock() {
     setSubmitting(true)
+    setTxPhase("simulating")
     try {
       if (multiMode) {
         await createSplitLock(
@@ -182,12 +221,29 @@ export function CreateTokenLockForm() {
         trackEvent("lock_create_token", { vesting })
         navigate(`/app/lock/${id}`)
       }
+      const { id } = await createTokenLock(
+        {
+          tokenAddress: tokenAddress.trim(),
+          amount: Number(amount),
+          beneficiary: beneficiary.trim() || address!,
+          unlockAt: Math.floor(unlockTs / 1000),
+          vesting: vesting ? { start: Math.floor(Date.now() / 1000), end: Math.floor(unlockTs / 1000) } : undefined,
+        },
+        address!,
+        signTransaction,
+        setTxPhase,
+      )
+      trackEvent("lock_create_token", { vesting })
+      localStorage.setItem(COOLDOWN_KEY, String(Date.now()))
+      setCooldownRemaining(COOLDOWN_SECONDS)
+      navigate(`/app/lock/${id}`)
     } catch (err: unknown) {
       console.error("[createLock error]", err)
       setShowConfirm(false)
       setError(formatError(err))
     } finally {
       setSubmitting(false)
+      setTxPhase("idle")
     }
   }
 
@@ -408,25 +464,41 @@ export function CreateTokenLockForm() {
         args={costArgs}
       />
 
-      <Button type="submit" size="lg" loading={submitting} disabled={!valid}>
+      {cooldownRemaining > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-muted-foreground">
+          <Timer className="h-4 w-4 shrink-0 text-primary animate-pulse" />
+          <span>
+            Rate limit: next lock available in{" "}
+            <span className="font-semibold tabular-nums text-foreground">{cooldownRemaining}s</span>
+          </span>
+        </div>
+      )}
+
+      <Button type="submit" size="lg" loading={submitting} disabled={!valid || cooldownRemaining > 0}>
         <Lock className="h-4 w-4" />
         {multiMode ? t("splitLock.submit") : t("tokenForm.submit")}
+        {cooldownRemaining > 0 ? `Wait ${cooldownRemaining}s…` : t("tokenForm.submit")}
       </Button>
     </form>
 
     {showConfirm && (
-      <ConfirmLockModal
-        data={{
-          tokenAddress: tokenAddress.trim(),
-          amount: amount,
-          beneficiary: beneficiary.trim() || address!,
-          unlockDate: unlockDate,
-          vesting,
-        }}
-        onConfirm={confirmLock}
-        onCancel={() => setShowConfirm(false)}
-        loading={submitting}
-      />
+      <>
+        <ConfirmLockModal
+          data={{
+            tokenAddress: tokenAddress.trim(),
+            amount: amount,
+            beneficiary: beneficiary.trim() || address!,
+            unlockDate: unlockDate,
+            vesting,
+          }}
+          onConfirm={confirmLock}
+          onCancel={() => setShowConfirm(false)}
+          loading={submitting}
+        />
+        <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 px-4">
+          <TxProgressSteps phase={txPhase} />
+        </div>
+      </>
     )}
   </>
   )
