@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/useTheme"
 import { Button } from "@/components/ui/Button"
 import { NotificationCenter } from "@/components/ui/NotificationCenter"
 import { shortAddress, cn } from "@/lib/utils"
+import { prefetch } from "@/lib/prefetch"
 
 export function Navbar() {
   const { t } = useTranslation()
@@ -27,6 +28,10 @@ export function Navbar() {
     { to: "/explore", label: t("nav.explore"), hint: `${mod}+K` },
     { to: "/app/create", label: t("nav.createLock"), hint: `${mod}+N` },
     { to: "/app/locks", label: t("nav.myLocks"), hint: `${mod}+L` },
+    { to: "/explore", label: t("nav.explore"), prefetchFn: prefetch.discover },
+    { to: "/app/create", label: t("nav.createLock"), prefetchFn: prefetch.createLock },
+    { to: "/app/locks", label: t("nav.myLocks"), prefetchFn: prefetch.myLocks },
+    { to: "/app/history", label: t("nav.history"), prefetchFn: prefetch.history },
   ]
 
   return (
@@ -47,6 +52,8 @@ export function Navbar() {
               key={link.to}
               to={link.to}
               title={link.hint}
+              onMouseEnter={link.prefetchFn}
+              onFocus={link.prefetchFn}
               className={({ isActive }) =>
                 cn(
                   "rounded-md px-3 py-2 text-sm font-medium transition-colors",
@@ -118,6 +125,8 @@ export function Navbar() {
                 key={link.to}
                 to={link.to}
                 onClick={() => setMenuOpen(false)}
+                onMouseEnter={link.prefetchFn}
+                onFocus={link.prefetchFn}
                 className={({ isActive }) =>
                   cn(
                     "rounded-md px-3 py-3 text-sm font-medium transition-colors",
