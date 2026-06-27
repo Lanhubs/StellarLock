@@ -160,7 +160,7 @@ impl LpLocker {
         let id = next_id(&env);
         let lock = LpLock {
             id,
-            pool_share,
+            pool_share: pool_share.clone(),
             dex,
             token_a,
             token_b,
