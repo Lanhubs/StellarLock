@@ -4,10 +4,10 @@ vulnerability = "deny"
 [licenses]
 unlicensed = "deny"
 copyleft = "deny"
-# By adding the combined expression here, we tell cargo-deny
-# that this specific license pattern is acceptable.
+# Just list the licenses you accept.
+# cargo-deny will automatically allow "MIT OR Apache-2.0"
+# because both "MIT" and "Apache-2.0" are in this list.
 allow = [
     "MIT",
     "Apache-2.0",
-    "MIT OR Apache-2.0",
 ]
