@@ -181,11 +181,10 @@ export async function createTokenLock(
     scArgs.push(xdr.ScVal.scvVoid())
   }
 
+  const id = await submitCall<bigint>(CONTRACTS.tokenLocker, "create_lock", scArgs, sourceAddress, signTransaction)
   await submitCall(CONTRACTS.tokenLocker, "create_lock", scArgs, sourceAddress, signTransaction, onProgress)
 
-  // The contract returns a u64 id, but submitCall doesn't surface return values.
-  // We return a temporary client-side id; the caller can re-fetch to get the real one.
-  return { id: "pending" }
+  return { id: String(id) }
 }
 
 export async function withdrawLock(

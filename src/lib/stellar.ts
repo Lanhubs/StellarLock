@@ -213,12 +213,13 @@ export async function simulateCall<T>(contractId: string, method: string, args: 
 
 // ── Submit (write) ────────────────────────────────────────────────────────────
 
-export async function submitCall(
+export async function submitCall<T = void>(
   contractId: string,
   method: string,
   args: xdr.ScVal[],
   sourceAddress: string,
   signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
+): Promise<T> {
   onProgress?: (phase: TxPhase) => void,
 ): Promise<void> {
   const rpc = getRpc()
@@ -272,6 +273,12 @@ export async function submitCall(
   if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
     throw new Error(`Transaction failed: ${JSON.stringify(getResult)}`)
   }
+
+  if (getResult.returnValue) {
+    return scValToNative(getResult.returnValue) as T
+  }
+
+  return undefined as T
 }
 
 // ── Address helpers ─────────────────────────────────────────────────────────
