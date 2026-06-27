@@ -24,6 +24,16 @@ export interface VestingSchedule {
   released: number
 }
 
+/** Optional contextual metadata attached at lock creation. Immutable after creation. */
+export interface LockMetadata {
+  /** Up to 280 characters describing why this lock exists. */
+  description?: string
+  /** Project or team website URL. */
+  projectUrl?: string
+  /** Token or project logo URL. */
+  logoUrl?: string
+}
+
 export interface Lock {
   /** On-chain lock id (u64). */
   id: string
@@ -56,6 +66,9 @@ export interface Lock {
 
   /** Optional linear vesting schedule. */
   vesting?: VestingSchedule
+
+  /** Optional immutable metadata set at lock creation. */
+  metadata?: LockMetadata
 }
 
 /** One share within a split lock. */

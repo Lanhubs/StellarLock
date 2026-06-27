@@ -21,7 +21,13 @@ export function Navbar() {
     setMenuOpen(false)
   }, [location.pathname])
 
+  const isMac = /mac/i.test(navigator.platform)
+  const mod = isMac ? "⌘" : "Ctrl"
+
   const navLinks = [
+    { to: "/explore", label: t("nav.explore"), hint: `${mod}+K` },
+    { to: "/app/create", label: t("nav.createLock"), hint: `${mod}+N` },
+    { to: "/app/locks", label: t("nav.myLocks"), hint: `${mod}+L` },
     { to: "/explore", label: t("nav.explore"), prefetchFn: prefetch.discover },
     { to: "/app/create", label: t("nav.createLock"), prefetchFn: prefetch.createLock },
     { to: "/app/locks", label: t("nav.myLocks"), prefetchFn: prefetch.myLocks },
@@ -45,6 +51,7 @@ export function Navbar() {
             <NavLink
               key={link.to}
               to={link.to}
+              title={link.hint}
               onMouseEnter={link.prefetchFn}
               onFocus={link.prefetchFn}
               className={({ isActive }) =>

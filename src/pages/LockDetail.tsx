@@ -317,6 +317,35 @@ function LockDetailView({ lock, onChange }: { lock: Lock; onChange: () => void }
             </div>
           </div>
         )}
+        {lock.metadata && (lock.metadata.description || lock.metadata.projectUrl || lock.metadata.logoUrl) && (
+          <div className="border-t border-border p-6">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Lock Details</h3>
+            <div className="flex flex-col gap-3">
+              {lock.metadata.logoUrl && (
+                <img
+                  src={lock.metadata.logoUrl}
+                  alt="Project logo"
+                  className="h-10 w-10 rounded-full border border-border object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                />
+              )}
+              {lock.metadata.description && (
+                <p className="text-sm text-muted-foreground">{lock.metadata.description}</p>
+              )}
+              {lock.metadata.projectUrl && (
+                <a
+                  href={lock.metadata.projectUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  {lock.metadata.projectUrl}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         {(isBeneficiary || isCreator) && <NotificationSettings lockId={lock.id} unlockAt={lock.unlockAt} />}
 
         {txPhase !== "idle" && (

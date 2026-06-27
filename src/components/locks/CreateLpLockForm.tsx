@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { Droplets, Info } from "lucide-react"
+import { Droplets, Info, ChevronDown, ChevronUp } from "lucide-react"
 import { Trans, useTranslation } from "react-i18next"
 import { Address, nativeToScVal, xdr } from "@stellar/stellar-sdk"
 import type { Dex } from "@/types/lock"
@@ -31,6 +31,10 @@ export function CreateLpLockForm() {
   const [submitting, setSubmitting] = useState(false)
   const [txPhase, setTxPhase] = useState<TxPhase | "idle">("idle")
   const [showConfirm, setShowConfirm] = useState(false)
+  const [metaOpen, setMetaOpen] = useState(false)
+  const [description, setDescription] = useState("")
+  const [projectUrl, setProjectUrl] = useState("")
+  const [logoUrl, setLogoUrl] = useState("")
 
   const dexes: { value: Dex; label: string; desc: string }[] = [
     { value: "aquarius", label: t("lpForm.aquarius"), desc: t("lpForm.aquariusDesc") },
@@ -226,6 +230,57 @@ export function CreateLpLockForm() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Lock Details (optional metadata) */}
+      <div className="rounded-lg border border-border">
+        <button
+          type="button"
+          onClick={() => setMetaOpen((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary/40"
+          aria-expanded={metaOpen}
+        >
+          <span>Lock Details <span className="ml-1 text-xs font-normal text-muted-foreground">(optional)</span></span>
+          {metaOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
+        {metaOpen && (
+          <div className="flex flex-col gap-4 border-t border-border px-4 pb-4 pt-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-meta-desc">Description</Label>
+              <textarea
+                id="lp-meta-desc"
+                rows={3}
+                maxLength={280}
+                placeholder="Why is this lock being created? (e.g. Liquidity locked for 2 years)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <p className="text-right text-xs text-muted-foreground">{description.length}/280</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-meta-url">Project URL</Label>
+              <Input
+                id="lp-meta-url"
+                type="url"
+                placeholder="https://your-project.com"
+                value={projectUrl}
+                onChange={(e) => setProjectUrl(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-meta-logo">Logo URL</Label>
+              <Input
+                id="lp-meta-logo"
+                type="url"
+                placeholder="https://your-project.com/logo.png"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted-foreground">

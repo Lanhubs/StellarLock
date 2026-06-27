@@ -10,6 +10,13 @@ import { initErrorTracking } from "@/lib/sentry"
 import { initWebVitals } from "@/lib/web-vitals"
 import "@/index.css"
 
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      // SW registration is best-effort; app works without it
+    })
+  })
+}
 initErrorTracking()
 initWebVitals()
 
