@@ -1,0 +1,19 @@
+[advisories]
+vulnerability = "deny"
+notice = "warn"
+
+[licenses]
+unlicensed = "deny"
+# The default list is too restrictive for common Rust crates.
+# We explicitly allow the most common dual-license patterns.
+allow = [
+    "MIT",
+    "Apache-2.0",
+]
+
+# This ensures that crates using "MIT OR Apache-2.0" are accepted
+# as long as both licenses are in our allowed list above.
+allow-osi-fsf-free = true
+
+[licenses.private]
+ignore = true
