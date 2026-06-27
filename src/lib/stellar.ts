@@ -5,6 +5,8 @@ import {
   rpc as SorobanRpc,
   TransactionBuilder,
   BASE_FEE,
+  nativeToScVal,
+  StrKey,
   scValToNative,
   xdr,
 } from "@stellar/stellar-sdk"
@@ -45,6 +47,9 @@ const POLL_INTERVAL_MS = 1500
 const MAX_CONCURRENT = 5
 const MAX_RETRIES = 3
 const CACHE_TTL_MS = 10_000
+
+/** Phase reported via the onProgress callback during submitCall. */
+export type TxPhase = "simulating" | "signing" | "submitting" | "confirming"
 
 // ── RPC client ────────────────────────────────────────────────────────────────
 
@@ -209,12 +214,14 @@ export async function simulateCall<T>(contractId: string, method: string, args: 
 
 // ── Submit (write) ────────────────────────────────────────────────────────────
 
-export async function submitCall(
+export async function submitCall<T = void>(
   contractId: string,
   method: string,
   args: xdr.ScVal[],
   sourceAddress: string,
   signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
+): Promise<T> {
+  onProgress?: (phase: TxPhase) => void,
 ): Promise<void> {
   const rpc = getRpc()
   const account = await rpc.getAccount(sourceAddress)
@@ -228,6 +235,7 @@ export async function submitCall(
     .setTimeout(30)
     .build()
 
+  onProgress?.("simulating")
   const simResult = await rpc.simulateTransaction(tx)
   if (import.meta.env.DEV) console.log("[submitCall sim]", method, simResult)
 
@@ -237,8 +245,10 @@ export async function submitCall(
 
   const preparedTx = SorobanRpc.assembleTransaction(tx, simResult).build()
 
+  onProgress?.("signing")
   const { signedTxXdr } = await signTransaction(preparedTx.toXDR())
 
+  onProgress?.("submitting")
   const sendResult = await rpc.sendTransaction(TransactionBuilder.fromXDR(signedTxXdr, NETWORK.passphrase))
   if (import.meta.env.DEV) console.log("[submitCall send]", sendResult)
 
@@ -249,6 +259,7 @@ export async function submitCall(
   // Invalidate read cache now that a mutation has been submitted successfully
   invalidateRpcCache()
 
+  onProgress?.("confirming")
   const MAX_POLL_ATTEMPTS = 40
   let getResult = await rpc.getTransaction(sendResult.hash)
   for (let attempts = 0; getResult.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND; attempts++) {
@@ -263,8 +274,27 @@ export async function submitCall(
   if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
     throw new Error(`Transaction failed: ${JSON.stringify(getResult)}`)
   }
+
+  if (getResult.returnValue) {
+    return scValToNative(getResult.returnValue) as T
+  }
+
+  return undefined as T
 }
 
+// ── Address helpers ─────────────────────────────────────────────────────────
+
+export function isValidStellarContractAddress(address: string): boolean {
+  return StrKey.isValidContract(address.trim())
+}
+
+export function isValidStellarPublicKey(address: string): boolean {
+  return StrKey.isValidEd25519PublicKey(address.trim())
+}
+
+export function isValidStellarAddress(address: string): boolean {
+  const trimmed = address.trim()
+  return StrKey.isValidEd25519PublicKey(trimmed) || StrKey.isValidContract(trimmed)
 // ── Cost estimation ───────────────────────────────────────────────────────────
 
 export interface LockCostEstimate {
@@ -313,6 +343,39 @@ export async function estimateLockCost(
 export async function getTokenBalance(tokenAddress: string, owner: string): Promise<number> {
   const raw = await simulateCall<bigint>(tokenAddress, "balance", [new Address(owner).toScVal()])
   return Number(raw ?? 0n) / STELLAR_DECIMALS
+}
+
+export async function getTokenAllowance(
+  tokenAddress: string,
+  owner: string,
+  spender: string,
+): Promise<number> {
+  const raw = await simulateCall<bigint>(tokenAddress, "allowance", [
+    new Address(owner).toScVal(),
+    new Address(spender).toScVal(),
+  ])
+  return Number(raw ?? 0n) / 1e7
+}
+
+export async function submitTokenApproval(
+  tokenAddress: string,
+  owner: string,
+  spender: string,
+  amount: number,
+  sourceAddress: string,
+  signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
+): Promise<void> {
+  const amountStroops = BigInt(Math.round(amount * 1e7))
+  const expirationLedger = 0
+
+  const scArgs: xdr.ScVal[] = [
+    new Address(owner).toScVal(),
+    new Address(spender).toScVal(),
+    nativeToScVal(amountStroops, { type: "i128" }),
+    nativeToScVal(expirationLedger, { type: "u32" }),
+  ]
+
+  await submitCall(tokenAddress, "approve", scArgs, sourceAddress, signTransaction)
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
