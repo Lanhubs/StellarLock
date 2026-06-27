@@ -1,16 +1,20 @@
 import { useMemo, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { Droplets, Info } from "lucide-react"
+import { Droplets, Info, ChevronDown, ChevronUp } from "lucide-react"
 import { Trans, useTranslation } from "react-i18next"
+import { Address, nativeToScVal, xdr } from "@stellar/stellar-sdk"
 import type { Dex } from "@/types/lock"
 import { Input, Label } from "@/components/ui/Input"
 import { Button } from "@/components/ui/Button"
-import { cn, formatDate } from "@/lib/utils"
+import { TxProgressSteps } from "@/components/ui/TxProgressSteps"
+import { cn, formatDate, isValidStellarAddress } from "@/lib/utils"
 import { useWallet } from "@/hooks/useWallet"
 import { createLpLock } from "@/lib/lp-locker"
 import { trackEvent } from "@/lib/analytics"
+import { CONTRACTS, type TxPhase } from "@/lib/stellar"
 import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
 import { isValidStellarContractAddress, isValidStellarPublicKey } from "@/lib/stellar"
+import { CostEstimate } from "@/components/locks/CostEstimate"
 
 const DAY = 86_400_000
 
@@ -26,8 +30,13 @@ export function CreateLpLockForm() {
   const [amount, setAmount] = useState("")
   const [unlockDate, setUnlockDate] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [txPhase, setTxPhase] = useState<TxPhase | "idle">("idle")
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [metaOpen, setMetaOpen] = useState(false)
+  const [description, setDescription] = useState("")
+  const [projectUrl, setProjectUrl] = useState("")
+  const [logoUrl, setLogoUrl] = useState("")
 
   const dexes: { value: Dex; label: string; desc: string }[] = [
     { value: "aquarius", label: t("lpForm.aquarius"), desc: t("lpForm.aquariusDesc") },
@@ -55,8 +64,43 @@ export function CreateLpLockForm() {
     tokenAValid &&
     tokenBValid &&
     beneficiaryValid &&
+    isValidStellarAddress(poolShareAddress.trim()) &&
+    isValidStellarAddress(tokenA.trim()) &&
+    isValidStellarAddress(tokenB.trim()) &&
     Number(amount) > 0 &&
     unlockTs > Date.now()
+
+  // Build the contract args for cost estimation when form is sufficiently filled in
+  const costArgs = useMemo((): xdr.ScVal[] | null => {
+    try {
+      if (
+        !address ||
+        poolShareAddress.trim().length <= 4 ||
+        tokenA.trim().length <= 4 ||
+        tokenB.trim().length <= 4 ||
+        Number(amount) <= 0 ||
+        unlockTs <= Date.now()
+      ) {
+        return null
+      }
+      const amountStroops = BigInt(Math.round(Number(amount) * 1e7))
+      const dexScVal = xdr.ScVal.scvVec([
+        xdr.ScVal.scvSymbol(dex === "aquarius" ? "Aquarius" : "Soroswap"),
+      ])
+      return [
+        new Address(address).toScVal(),
+        new Address(poolShareAddress.trim()).toScVal(),
+        dexScVal,
+        new Address(tokenA.trim()).toScVal(),
+        new Address(tokenB.trim()).toScVal(),
+        nativeToScVal(amountStroops, { type: "i128" }),
+        new Address(address).toScVal(),
+        nativeToScVal(BigInt(Math.floor(unlockTs / 1000)), { type: "u64" }),
+      ]
+    } catch {
+      return null
+    }
+  }, [address, dex, poolShareAddress, tokenA, tokenB, amount, unlockTs])
 
   function applyPreset(days: number) {
     setUnlockDate(new Date(Date.now() + days * DAY).toISOString().slice(0, 10))
@@ -71,6 +115,7 @@ export function CreateLpLockForm() {
 
   async function confirmLock() {
     setSubmitting(true)
+    setTxPhase("simulating")
     try {
       const { id } = await createLpLock(
         {
@@ -84,6 +129,7 @@ export function CreateLpLockForm() {
         },
         address!,
         signTransaction,
+        setTxPhase,
       )
       trackEvent("lock_create_lp", { dex })
       navigate(`/app/lock/${id}`)
@@ -99,6 +145,7 @@ export function CreateLpLockForm() {
       }
     } finally {
       setSubmitting(false)
+      setTxPhase("idle")
     }
   }
 
@@ -212,6 +259,57 @@ export function CreateLpLockForm() {
         </div>
       </div>
 
+      {/* Lock Details (optional metadata) */}
+      <div className="rounded-lg border border-border">
+        <button
+          type="button"
+          onClick={() => setMetaOpen((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium transition-colors hover:bg-secondary/40"
+          aria-expanded={metaOpen}
+        >
+          <span>Lock Details <span className="ml-1 text-xs font-normal text-muted-foreground">(optional)</span></span>
+          {metaOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
+        {metaOpen && (
+          <div className="flex flex-col gap-4 border-t border-border px-4 pb-4 pt-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-meta-desc">Description</Label>
+              <textarea
+                id="lp-meta-desc"
+                rows={3}
+                maxLength={280}
+                placeholder="Why is this lock being created? (e.g. Liquidity locked for 2 years)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <p className="text-right text-xs text-muted-foreground">{description.length}/280</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-meta-url">Project URL</Label>
+              <Input
+                id="lp-meta-url"
+                type="url"
+                placeholder="https://your-project.com"
+                value={projectUrl}
+                onChange={(e) => setProjectUrl(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lp-meta-logo">Logo URL</Label>
+              <Input
+                id="lp-meta-logo"
+                type="url"
+                placeholder="https://your-project.com/logo.png"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm text-muted-foreground">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <span>
@@ -231,6 +329,12 @@ export function CreateLpLockForm() {
         </span>
       </div>
 
+      <CostEstimate
+        contractId={CONTRACTS.lpLocker}
+        method="create_lock"
+        args={costArgs}
+      />
+
       <Button type="submit" size="lg" loading={submitting} disabled={!valid}>
         <Droplets className="h-4 w-4" />
         {t("lpForm.submit")}
@@ -249,20 +353,25 @@ export function CreateLpLockForm() {
     </form>
 
     {showConfirm && (
-      <ConfirmLockModal
-        data={{
-          tokenAddress: poolShareAddress.trim(),
-          amount: amount,
-          beneficiary: address!,
-          unlockDate: unlockDate,
-          isLp: true,
-          dex: dex,
-          poolShareAddress: poolShareAddress.trim(),
-        }}
-        onConfirm={confirmLock}
-        onCancel={() => setShowConfirm(false)}
-        loading={submitting}
-      />
+      <>
+        <ConfirmLockModal
+          data={{
+            tokenAddress: poolShareAddress.trim(),
+            amount: amount,
+            beneficiary: address!,
+            unlockDate: unlockDate,
+            isLp: true,
+            dex: dex,
+            poolShareAddress: poolShareAddress.trim(),
+          }}
+          onConfirm={confirmLock}
+          onCancel={() => setShowConfirm(false)}
+          loading={submitting}
+        />
+        <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-sm -translate-x-1/2 px-4">
+          <TxProgressSteps phase={txPhase} />
+        </div>
+      </>
     )}
   </>
   )
