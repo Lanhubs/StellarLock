@@ -14,7 +14,7 @@ export function LockCard({ lock }: { lock: Lock }) {
   const { t } = useTranslation()
 
   return (
-    <Link to={`/app/lock/${lock.id}`} className="group block">
+    <Link to={`/app/lock/${lock.kind}/${lock.id}`} className="group block">
       <Card className="p-5 transition-colors hover:border-primary/40">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">

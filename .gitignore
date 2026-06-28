@@ -16,3 +16,23 @@ contracts/target/
 # Editor
 .vscode/
 .idea/
+
+# Test artifacts
+**/__snapshots__/
+*.snap
+coverage/
+.nyc_output/
+
+# Vitest
+vitest.config.d.ts
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+Thumbs.db

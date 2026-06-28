@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom"
 import { ArrowLeft, Lock as LockIcon, Repeat, ExternalLink, ShieldCheck, UserRoundPen } from "lucide-react"
 import { Helmet } from "react-helmet-async"
 import { useTranslation } from "react-i18next"
@@ -25,7 +25,10 @@ import type { Lock } from "@/types/lock"
 export function LockDetail() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
-  const { data: lock, loading, error, reload } = useLock(id)
+  const location = useLocation()
+  // Derive type from URL: /app/lock/lp/:id → "lp", everything else → "token"
+  const lockType: "token" | "lp" = location.pathname.includes("/app/lock/lp/") ? "lp" : "token"
+  const { data: lock, loading, error, reload } = useLock(id, lockType)
 
   if (loading) {
     return (

@@ -43,7 +43,6 @@ export function Navbar() {
             <NavLink
               key={link.to}
               to={link.to}
-              to={link.to}
               className={({ isActive }) =>
                 cn(
                   "rounded-md px-3 py-2 text-sm font-medium transition-colors",

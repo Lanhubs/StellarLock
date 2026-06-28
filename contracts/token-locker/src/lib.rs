@@ -186,16 +186,8 @@ impl TokenLocker {
         push_index(&env, DataKey::ByToken(token), id);
 
         env.events().publish(
-            (
-                Symbol::new(&env, "lock_created"),
-                id,
-                creator.clone(),
-                token.clone(),
-                amount,
-                beneficiary.clone(),
-                unlock_at,
-            ),
-            (),
+            (Symbol::new(&env, "lock_created"),),
+            (id, token.clone(), amount, creator.clone(), beneficiary.clone(), unlock_at),
         );
         Ok(id)
     }
@@ -245,14 +237,8 @@ impl TokenLocker {
 
         save_lock(&env, &lock);
         env.events().publish(
-            (
-                Symbol::new(&env, "lock_withdrawn"),
-                id,
-                lock.beneficiary.clone(),
-                lock.token.clone(),
-                releasable,
-            ),
-            (),
+            (Symbol::new(&env, "lock_withdrawn"),),
+            (id, lock.beneficiary.clone(), lock.token.clone(), releasable),
         );
         Ok(())
     }
@@ -275,14 +261,8 @@ impl TokenLocker {
 
         save_lock(&env, &lock);
         env.events().publish(
-            (
-                Symbol::new(&env, "lock_extended"),
-                id,
-                lock.creator.clone(),
-                old_unlock_at,
-                new_unlock_at,
-            ),
-            (),
+            (Symbol::new(&env, "lock_extended"),),
+            (id, lock.creator.clone(), old_unlock_at, new_unlock_at),
         );
         Ok(())
     }
@@ -304,13 +284,8 @@ impl TokenLocker {
         save_lock(&env, &lock);
 
         env.events().publish(
-            (
-                Symbol::new(&env, "beneficiary_transferred"),
-                id,
-                old_beneficiary,
-                new_beneficiary,
-            ),
-            (),
+            (Symbol::new(&env, "beneficiary_transferred"),),
+            (id, old_beneficiary, new_beneficiary),
         );
         Ok(())
     }

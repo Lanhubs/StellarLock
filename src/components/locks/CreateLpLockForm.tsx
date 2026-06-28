@@ -6,7 +6,7 @@ import { Address, nativeToScVal, xdr } from "@stellar/stellar-sdk"
 import type { Dex } from "@/types/lock"
 import { Input, Label } from "@/components/ui/Input"
 import { Button } from "@/components/ui/Button"
-import { cn, formatDate, isValidStellarAddress } from "@/lib/utils"
+import { cn, formatDate, formatError, isValidStellarAddress } from "@/lib/utils"
 import { useWallet } from "@/hooks/useWallet"
 import { createLpLock } from "@/lib/lp-locker"
 import { trackEvent } from "@/lib/analytics"
@@ -28,6 +28,7 @@ export function CreateLpLockForm() {
   const [amount, setAmount] = useState("")
   const [unlockDate, setUnlockDate] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [showConfirm, setShowConfirm] = useState(false)
 
   const dexes: { value: Dex; label: string; desc: string }[] = [
@@ -87,9 +88,10 @@ export function CreateLpLockForm() {
     setUnlockDate(new Date(Date.now() + days * DAY).toISOString().slice(0, 10))
   }
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault()
     if (!valid) return
+    setError(null)
     setShowConfirm(true)
   }
 
@@ -110,7 +112,11 @@ export function CreateLpLockForm() {
         signTransaction,
       )
       trackEvent("lock_create_lp", { dex })
-      navigate(`/app/lock/${id}`)
+      navigate(`/app/lock/lp/${id}`)
+    } catch (err: unknown) {
+      console.error("[createLpLock error]", err)
+      setShowConfirm(false)
+      setError(formatError(err))
     } finally {
       setSubmitting(false)
     }
@@ -240,6 +246,17 @@ export function CreateLpLockForm() {
             </>
           )}
         </span>
+      </div>
+
+      <div aria-live="polite" aria-atomic="true">
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            {error}
+          </div>
+        )}
       </div>
 
       <CostEstimate

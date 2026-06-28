@@ -10,7 +10,6 @@ import { useTokenBalance } from "@/hooks/useLocks"
 import { createTokenLock } from "@/lib/token-locker"
 import { trackEvent } from "@/lib/analytics"
 import { formatDate, formatError, isValidStellarAddress } from "@/lib/utils"
-import { formatDate } from "@/lib/utils"
 import { CONTRACTS } from "@/lib/stellar"
 import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
 import { CostEstimate } from "@/components/locks/CostEstimate"
@@ -150,7 +149,7 @@ export function CreateTokenLockForm() {
         signTransaction,
       )
       trackEvent("lock_create_token", { vesting })
-      navigate(`/app/lock/${id}`)
+      navigate(`/app/lock/token/${id}`)
     } catch (err: unknown) {
       console.error("[createLock error]", err)
       setShowConfirm(false)
