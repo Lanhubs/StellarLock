@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:testnet": "cp .env.testnet .env && vite --host",
+    "dev:staging": "cp .env.staging .env && vite --host",
     "build": "tsc -b && vite build",
+    "build:testnet": "cp .env.testnet .env && tsc -b && vite build",
+    "build:staging": "cp .env.staging .env && tsc -b && vite build",
+    "build:mainnet": "cp .env.mainnet .env && tsc -b && vite build",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",

@@ -9,6 +9,7 @@ import { LanguageSelector } from "@/components/layout/LanguageSelector"
 import { Button } from "@/components/ui/Button"
 import { NotificationCenter } from "@/components/ui/NotificationCenter"
 import { RpcStatusIndicator } from "@/components/layout/RpcStatus"
+import { EnvBadge } from "@/components/ui/EnvBadge"
 import { shortAddress, cn } from "@/lib/utils"
 import { prefetch } from "@/lib/prefetch"
 
@@ -72,6 +73,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <RpcStatusIndicator />
+          <EnvBadge />
           <span className="hidden rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground sm:inline-flex">
             {NETWORK.displayName}
           </span>

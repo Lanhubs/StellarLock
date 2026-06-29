@@ -52,11 +52,62 @@ Token and LP liquidity lock platform built on [Stellar Soroban](https://soroban.
 - [pnpm](https://pnpm.io) — `npm install -g pnpm`
 - [Freighter](https://www.freighter.app) browser extension set to **Testnet**
 
+### Environments
+
+Three environment templates are provided:
+
+| File | Network | Purpose |
+|---|---|---|
+| `.env.testnet` | Soroban Testnet | Local development and CI |
+| `.env.staging` | Mainnet (staging contracts) | QA / pre-production sign-off |
+| `.env.mainnet` | Mainnet | Production |
+
+Copy the template for the environment you want to use:
+
+```bash
+cp .env.testnet .env   # testnet (default)
+cp .env.staging .env   # staging
+cp .env.mainnet .env   # mainnet
+```
+
+Or use the pnpm scripts, which copy automatically before starting:
+
+```bash
+pnpm dev              # uses existing .env
+pnpm dev:testnet      # copies .env.testnet then starts Vite
+pnpm dev:staging      # copies .env.staging then starts Vite
+
+pnpm build            # uses existing .env
+pnpm build:testnet    # copies .env.testnet then builds
+pnpm build:staging    # copies .env.staging then builds
+pnpm build:mainnet    # copies .env.mainnet then builds
+```
+
+#### Required variables
+
+| Variable | Description |
+|---|---|
+| `VITE_NETWORK` | `testnet`, `staging`, or `mainnet` |
+| `VITE_RPC_URL` | Soroban RPC endpoint |
+| `VITE_HORIZON_URL` | Horizon REST endpoint |
+| `VITE_TOKEN_LOCKER_CONTRACT` | Deployed token locker contract ID |
+| `VITE_LP_LOCKER_CONTRACT` | Deployed LP locker contract ID |
+| `VITE_CONTRACT_ENV` | `testnet` or `mainnet` — selects addresses from `contracts/registry.json` |
+| `VITE_CONTRACT_VERSION` | Contract version, e.g. `v1` |
+
+Optional: `VITE_PLAUSIBLE_DOMAIN`, `VITE_PLAUSIBLE_API_HOST`, `VITE_SENTRY_DSN`, `VITE_APP_URL`.
+
+The app validates all required variables at startup and throws a clear error listing any that are missing — the page will not load until they are set.
+
+#### Environment badge
+
+A `DEV` (blue) or `STAGING` (amber) badge appears in the Navbar header when `VITE_NETWORK` is not `mainnet`. The badge is invisible in production builds.
+
 ### Run locally
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev:testnet
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
@@ -64,7 +115,7 @@ Open [http://localhost:5173](http://localhost:5173).
 ### Build
 
 ```bash
-pnpm build
+pnpm build:mainnet
 ```
 
 ## Smart Contracts

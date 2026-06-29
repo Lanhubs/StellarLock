@@ -1,24 +1,24 @@
 {
-    "token-locker": {
-        "testnet": {
-            "v1": {
-                "address": "REPLACE_ME",
-                "deployedAt": "1970-01-01T00:00:00Z",
-                "wasmHash": "REPLACE_ME",
-                "deprecated": true
-            }
-        },
-        "mainnet": {}
+  "token-locker": {
+    "testnet": {
+      "v1": {
+        "address": "CBFCKEOQRQIXKLGU4QBUQVOINOKFBOXJ37LXEKLKNUO6TW4FNGDU26AW",
+        "deployedAt": "2024-01-01T00:00:00Z",
+        "wasmHash": "REPLACE_ME",
+        "deprecated": false
+      }
     },
-    "lp-locker": {
-        "testnet": {
-            "v1": {
-                "address": "REPLACE_ME",
-                "deployedAt": "1970-01-01T00:00:00Z",
-                "wasmHash": "REPLACE_ME",
-                "deprecated": true
-            }
-        },
-        "mainnet": {}
-    }
+    "mainnet": {}
+  },
+  "lp-locker": {
+    "testnet": {
+      "v1": {
+        "address": "CA3WYETNIF5IAF3VUNQ3SYKZFV45TOFBF7CEZ46I7QEBPWTRM73WLEI4",
+        "deployedAt": "2024-01-01T00:00:00Z",
+        "wasmHash": "REPLACE_ME",
+        "deprecated": false
+      }
+    },
+    "mainnet": {}
+  }
 }
