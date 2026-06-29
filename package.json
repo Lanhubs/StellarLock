@@ -5,16 +5,32 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
+    "dev:testnet": "cp .env.testnet .env && vite --host",
+    "dev:staging": "cp .env.staging .env && vite --host",
     "build": "tsc -b && vite build",
+    "build:testnet": "cp .env.testnet .env && tsc -b && vite build",
+    "build:staging": "cp .env.staging .env && tsc -b && vite build",
+    "build:mainnet": "cp .env.mainnet .env && tsc -b && vite build",
     "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:load": "node --loader tsx src/test/load-test-runner.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
+  },
+  "pnpm": {
+    "overrides": {
+      "protobufjs": "^7.5.6",
+      "vite": ">=6.4.3",
+      "vitest": "^3.2.6"
+    }
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^1.7.6",
@@ -28,12 +44,20 @@
     "react": "^19",
     "react-dom": "^19",
     "react-helmet-async": "^3.0.0",
+    "react-hot-toast": "^2.6.0",
     "react-i18next": "^17.0.8",
     "react-router-dom": "^7.17.0",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "web-vitals": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9",
+    "@storybook/addon-a11y": "^8.0.0",
+    "@storybook/addon-essentials": "^8.0.0",
+    "@storybook/addon-interactions": "^8.0.0",
+    "@storybook/addon-onboarding": "^8.0.0",
+    "@storybook/react": "^8.0.0",
+    "@storybook/react-vite": "^8.0.0",
     "@tailwindcss/vite": "^4.3.1",
     "@testing-library/jest-dom": "^6",
     "@testing-library/react": "^14",
@@ -51,6 +75,7 @@
     "jsdom": "^24",
     "lint-staged": "^15",
     "prettier": "^3",
+    "storybook": "^8.0.0",
     "tailwindcss": "^4",
     "typescript": "5.7.3",
     "typescript-eslint": "^8",

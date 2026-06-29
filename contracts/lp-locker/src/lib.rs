@@ -1,7 +1,11 @@
 #![no_std]
+
+#[cfg(test)]
+mod tests;
+
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, token, vec,
-    Address, Env, Symbol, Vec,
+    Address, BytesN, Env, Symbol, Vec,
 };
 
 // ── TTL constants ─────────────────────────────────────────────────────────────
@@ -19,6 +23,21 @@ pub enum DataKey {
     NextId,
     ByCreator(Address),
     ByBeneficiary(Address),
+    ByPoolShare(Address),
+    TotalLocked(Address),
+    GlobalLockCount,
+    UniquePoolShareCount,
+    Admin,
+    UpgradeProposal,
+}
+
+const UPGRADE_DELAY: u64 = 7 * 24 * 3600;
+
+#[contracttype]
+#[derive(Clone)]
+pub struct UpgradeProposal {
+    pub new_wasm_hash: BytesN<32>,
+    pub execute_after: u64,
 }
 
 // ── Error types ───────────────────────────────────────────────────────────────
@@ -34,6 +53,13 @@ pub enum ContractError {
 }
 
 // ── On-chain types ────────────────────────────────────────────────────────────
+
+#[contracttype]
+#[derive(Clone)]
+pub struct GlobalStats {
+    pub total_lock_count: u64,
+    pub unique_pool_share_count: u64,
+}
 
 /// Typed DEX enum — avoids free-form string encoding mismatches.
 #[contracttype]
@@ -160,7 +186,7 @@ impl LpLocker {
         let id = next_id(&env);
         let lock = LpLock {
             id,
-            pool_share,
+            pool_share: pool_share.clone(),
             dex,
             token_a,
             token_b,
@@ -176,13 +202,24 @@ impl LpLocker {
         save_lock(&env, &lock);
         push_index(&env, DataKey::ByCreator(creator.clone()), id);
         push_index(&env, DataKey::ByBeneficiary(beneficiary.clone()), id);
+        push_index(&env, DataKey::ByPoolShare(lock.pool_share.clone()), id);
+
+        // Update per-pool-share TVL and global stats
+        let current_tvl: i128 = env.storage().persistent().get(&DataKey::TotalLocked(lock.pool_share.clone())).unwrap_or(0);
+        if current_tvl == 0 {
+            let unique_count: u64 = env.storage().persistent().get(&DataKey::UniquePoolShareCount).unwrap_or(0);
+            env.storage().persistent().set(&DataKey::UniquePoolShareCount, &(unique_count + 1));
+        }
+        env.storage().persistent().set(&DataKey::TotalLocked(lock.pool_share.clone()), &(current_tvl + amount));
+        let lock_count: u64 = env.storage().persistent().get(&DataKey::GlobalLockCount).unwrap_or(0);
+        env.storage().persistent().set(&DataKey::GlobalLockCount, &(lock_count + 1));
 
         env.events().publish(
             (
                 Symbol::new(&env, "lp_lock_created"),
                 id,
                 creator,
-                pool_share,
+                lock.pool_share.clone(),
                 amount,
                 beneficiary,
                 unlock_at,
@@ -210,17 +247,16 @@ impl LpLocker {
             &lock.amount,
         );
 
+        // Decrement TVL
+        let current_tvl: i128 = env.storage().persistent().get(&DataKey::TotalLocked(lock.pool_share.clone())).unwrap_or(0);
+        let new_tvl = (current_tvl - lock.amount).max(0);
+        env.storage().persistent().set(&DataKey::TotalLocked(lock.pool_share.clone()), &new_tvl);
+
         lock.withdrawn = true;
         save_lock(&env, &lock);
         env.events().publish(
-            (
-                Symbol::new(&env, "lp_lock_withdrawn"),
-                id,
-                lock.beneficiary.clone(),
-                lock.pool_share.clone(),
-                lock.amount,
-            ),
-            (),
+            (Symbol::new(&env, "lp_lock_withdrawn"),),
+            (id, lock.beneficiary.clone(), lock.pool_share.clone(), lock.amount),
         );
         Ok(())
     }
@@ -243,14 +279,8 @@ impl LpLocker {
 
         save_lock(&env, &lock);
         env.events().publish(
-            (
-                Symbol::new(&env, "lp_lock_extended"),
-                id,
-                lock.creator.clone(),
-                old_unlock_at,
-                new_unlock_at,
-            ),
-            (),
+            (Symbol::new(&env, "lp_lock_extended"),),
+            (id, lock.creator.clone(), old_unlock_at, new_unlock_at),
         );
         Ok(())
     }
@@ -272,13 +302,8 @@ impl LpLocker {
         save_lock(&env, &lock);
 
         env.events().publish(
-            (
-                Symbol::new(&env, "lp_beneficiary_transferred"),
-                id,
-                old_beneficiary,
-                new_beneficiary,
-            ),
-            (),
+            (Symbol::new(&env, "lp_beneficiary_transferred"),),
+            (id, old_beneficiary, new_beneficiary),
         );
         Ok(())
     }
@@ -315,5 +340,70 @@ impl LpLocker {
 
     pub fn get_lock_count_by_beneficiary(env: Env, beneficiary: Address) -> u32 {
         get_index(&env, DataKey::ByBeneficiary(beneficiary)).len()
+    }
+
+    pub fn get_locks_by_pool_share(env: Env, pool_share: Address, offset: u32, limit: u32) -> Vec<LpLock> {
+        let ids = get_index(&env, DataKey::ByPoolShare(pool_share));
+        collect_locks_paginated(&env, ids, offset, limit)
+    }
+
+    pub fn get_lock_count_by_pool_share(env: Env, pool_share: Address) -> u32 {
+        get_index(&env, DataKey::ByPoolShare(pool_share)).len()
+    }
+
+    pub fn get_total_locked(env: Env, pool_share: Address) -> i128 {
+        env.storage().persistent().get(&DataKey::TotalLocked(pool_share)).unwrap_or(0)
+    }
+
+    pub fn get_global_stats(env: Env) -> GlobalStats {
+        let total_lock_count: u64 = env.storage().persistent().get(&DataKey::GlobalLockCount).unwrap_or(0);
+        let unique_pool_share_count: u64 = env.storage().persistent().get(&DataKey::UniquePoolShareCount).unwrap_or(0);
+        GlobalStats { total_lock_count, unique_pool_share_count }
+    }
+
+    // ── Upgrade mechanism (7-day timelock) ───────────────────────────────────
+
+    pub fn init(env: Env, admin: Address) {
+        if env.storage().instance().has(&DataKey::Admin) {
+            panic!("already initialised");
+        }
+        admin.require_auth();
+        env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().extend_ttl(INSTANCE_THRESHOLD, INSTANCE_BUMP);
+    }
+
+    pub fn propose_upgrade(env: Env, new_wasm_hash: BytesN<32>) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).expect("not initialised");
+        admin.require_auth();
+        let execute_after = env.ledger().timestamp() + UPGRADE_DELAY;
+        let proposal = UpgradeProposal { new_wasm_hash, execute_after };
+        env.storage().instance().set(&DataKey::UpgradeProposal, &proposal);
+        env.storage().instance().extend_ttl(INSTANCE_THRESHOLD, INSTANCE_BUMP);
+        env.events().publish(
+            (Symbol::new(&env, "upgrade_proposed"), execute_after),
+            (),
+        );
+    }
+
+    pub fn execute_upgrade(env: Env) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).expect("not initialised");
+        admin.require_auth();
+        let proposal: UpgradeProposal = env
+            .storage()
+            .instance()
+            .get(&DataKey::UpgradeProposal)
+            .expect("no pending upgrade");
+        if env.ledger().timestamp() < proposal.execute_after {
+            panic!("timelock not elapsed");
+        }
+        env.storage().instance().remove(&DataKey::UpgradeProposal);
+        env.deployer().update_current_contract_wasm(proposal.new_wasm_hash);
+    }
+
+    pub fn cancel_upgrade(env: Env) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).expect("not initialised");
+        admin.require_auth();
+        env.storage().instance().remove(&DataKey::UpgradeProposal);
+        env.events().publish((Symbol::new(&env, "upgrade_cancelled"),), ());
     }
 }
