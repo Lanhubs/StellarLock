@@ -292,91 +292,93 @@ export function isValidStellarPublicKey(address: string): boolean {
 export function isValidStellarAddress(address: string): boolean {
   const trimmed = address.trim()
   return StrKey.isValidEd25519PublicKey(trimmed) || StrKey.isValidContract(trimmed)
-  // ── Cost estimation ───────────────────────────────────────────────────────────
+}
 
-  export interface LockCostEstimate {
-    networkFee: number  // in XLM
-    resourceFee: number // in XLM (storage deposit + compute)
-    total: number       // in XLM
+// ── Cost estimation ───────────────────────────────────────────────────────────
+
+export interface LockCostEstimate {
+  networkFee: number  // in XLM
+  resourceFee: number // in XLM (storage deposit + compute)
+  total: number       // in XLM
+}
+
+export async function estimateLockCost(
+  contractId: string,
+  method: string,
+  args: xdr.ScVal[],
+): Promise<LockCostEstimate> {
+  const rpc = getRpc()
+
+  const dummySource = {
+    accountId: () => "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN",
+    sequenceNumber: () => "0",
+    incrementSequenceNumber: () => { },
   }
 
-  export async function estimateLockCost(
-    contractId: string,
-    method: string,
-    args: xdr.ScVal[],
-  ): Promise<LockCostEstimate> {
-    const rpc = getRpc()
+  const contract = new Contract(contractId)
+  const tx = new TransactionBuilder(dummySource, {
+    fee: BASE_FEE,
+    networkPassphrase: NETWORK.passphrase,
+  })
+    .addOperation(contract.call(method, ...args))
+    .setTimeout(30)
+    .build()
 
-    const dummySource = {
-      accountId: () => "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN",
-      sequenceNumber: () => "0",
-      incrementSequenceNumber: () => { },
-    }
+  const result = await rpc.simulateTransaction(tx)
+  if (import.meta.env.DEV) console.log("[estimateLockCost]", method, result)
 
-    const contract = new Contract(contractId)
-    const tx = new TransactionBuilder(dummySource, {
-      fee: BASE_FEE,
-      networkPassphrase: NETWORK.passphrase,
-    })
-      .addOperation(contract.call(method, ...args))
-      .setTimeout(30)
-      .build()
-
-    const result = await rpc.simulateTransaction(tx)
-    if (import.meta.env.DEV) console.log("[estimateLockCost]", method, result)
-
-    if (SorobanRpc.Api.isSimulationError(result)) {
-      throw new Error(`Cost simulation failed: ${simError(result)}`)
-    }
-
-    const minResourceFee = Number((result as { minResourceFee?: string }).minResourceFee ?? "0")
-    const networkFee = Number(BASE_FEE) / 1e7
-    const resourceFee = minResourceFee / 1e7
-    return { networkFee, resourceFee, total: networkFee + resourceFee }
+  if (SorobanRpc.Api.isSimulationError(result)) {
+    throw new Error(`Cost simulation failed: ${simError(result)}`)
   }
 
-  // ── Token helpers ────────────────────────────────────────────────────────────
+  const minResourceFee = Number((result as { minResourceFee?: string }).minResourceFee ?? "0")
+  const networkFee = Number(BASE_FEE) / 1e7
+  const resourceFee = minResourceFee / 1e7
+  return { networkFee, resourceFee, total: networkFee + resourceFee }
+}
 
-  export async function getTokenBalance(tokenAddress: string, owner: string): Promise<number> {
-    const raw = await simulateCall<bigint>(tokenAddress, "balance", [new Address(owner).toScVal()])
-    return Number(raw ?? 0n) / STELLAR_DECIMALS
-  }
+// ── Token helpers ────────────────────────────────────────────────────────────
 
-  export async function getTokenAllowance(
-    tokenAddress: string,
-    owner: string,
-    spender: string,
-  ): Promise<number> {
-    const raw = await simulateCall<bigint>(tokenAddress, "allowance", [
-      new Address(owner).toScVal(),
-      new Address(spender).toScVal(),
-    ])
-    return Number(raw ?? 0n) / 1e7
-  }
+export async function getTokenBalance(tokenAddress: string, owner: string): Promise<number> {
+  const raw = await simulateCall<bigint>(tokenAddress, "balance", [new Address(owner).toScVal()])
+  return Number(raw ?? 0n) / STELLAR_DECIMALS
+}
 
-  export async function submitTokenApproval(
-    tokenAddress: string,
-    owner: string,
-    spender: string,
-    amount: number,
-    sourceAddress: string,
-    signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
-  ): Promise<void> {
-    const amountStroops = BigInt(Math.round(amount * 1e7))
-    const expirationLedger = 0
+export async function getTokenAllowance(
+  tokenAddress: string,
+  owner: string,
+  spender: string,
+): Promise<number> {
+  const raw = await simulateCall<bigint>(tokenAddress, "allowance", [
+    new Address(owner).toScVal(),
+    new Address(spender).toScVal(),
+  ])
+  return Number(raw ?? 0n) / 1e7
+}
 
-    const scArgs: xdr.ScVal[] = [
-      new Address(owner).toScVal(),
-      new Address(spender).toScVal(),
-      nativeToScVal(amountStroops, { type: "i128" }),
-      nativeToScVal(expirationLedger, { type: "u32" }),
-    ]
+export async function submitTokenApproval(
+  tokenAddress: string,
+  owner: string,
+  spender: string,
+  amount: number,
+  sourceAddress: string,
+  signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
+): Promise<void> {
+  const amountStroops = BigInt(Math.round(amount * 1e7))
+  const expirationLedger = 0
 
-    await submitCall(tokenAddress, "approve", scArgs, sourceAddress, signTransaction)
-  }
+  const scArgs: xdr.ScVal[] = [
+    new Address(owner).toScVal(),
+    new Address(spender).toScVal(),
+    nativeToScVal(amountStroops, { type: "i128" }),
+    nativeToScVal(expirationLedger, { type: "u32" }),
+  ]
 
-  // ── Utils ─────────────────────────────────────────────────────────────────────
+  await submitCall(tokenAddress, "approve", scArgs, sourceAddress, signTransaction)
+}
 
-  export function explorerLink(address: string): string {
-    return `https://stellar.expert/explorer/${NETWORK.networkName}/contract/${address}`
-  }
+// ── Utils ─────────────────────────────────────────────────────────────────────
+
+export function explorerLink(address: string): string {
+  return `https://stellar.expert/explorer/${NETWORK.networkName}/contract/${address}`
+}
