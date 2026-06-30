@@ -18,6 +18,7 @@ const Explorer = lazy(() => import("./pages/Explorer").then((m) => ({ default: m
 const Discover = lazy(() => import("./pages/Discover").then((m) => ({ default: m.Discover })))
 const History = lazy(() => import("./pages/History").then((m) => ({ default: m.History })))
 const Health = lazy(() => import("./pages/Health").then((m) => ({ default: m.HealthPage })))
+const Settings = lazy(() => import("./pages/Settings").then((m) => ({ default: m.Settings })))
 
 export function App() {
   const location = useLocation()
@@ -47,6 +48,7 @@ export function App() {
           <Route path="/app/lock/lp/:id" element={<LockDetail />} />
           {/* Legacy deep-link: redirect bare id to token-locker */}
           <Route path="/app/lock/:id" element={<LockDetail />} />
+          <Route path="/app/settings" element={<Settings />} />
           <Route path="/health" element={<Health />} />
           <Route path="/explore" element={<Discover />} />
           <Route path="/explore/:token" element={<Explorer />} />

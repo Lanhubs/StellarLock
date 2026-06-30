@@ -17,7 +17,10 @@ import { trackEvent } from "@/lib/analytics"
 import { CONTRACTS, type TxPhase } from "@/lib/stellar"
 import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
 import { isValidStellarContractAddress, isValidStellarPublicKey } from "@/lib/stellar"
+import { MultiBeneficiaryFields } from "@/components/locks/MultiBeneficiaryFields"
 import { CostEstimate } from "@/components/locks/CostEstimate"
+import { AddressBookModal } from "@/components/ui/AddressBookModal"
+import { BookUser } from "lucide-react"
 
 const DAY = 86_400_000
 
@@ -41,6 +44,8 @@ export function CreateLpLockForm() {
   const [description, setDescription] = useState("")
   const [projectUrl, setProjectUrl] = useState("")
   const [logoUrl, setLogoUrl] = useState("")
+  const [beneficiaryOverride, setBeneficiaryOverride] = useState("")
+  const [addressBookOpen, setAddressBookOpen] = useState(false)
 
   const dexes: { value: Dex; label: string; desc: string }[] = [
     { value: "aquarius", label: t("lpForm.aquarius"), desc: t("lpForm.aquariusDesc") },
@@ -291,6 +296,35 @@ export function CreateLpLockForm() {
           </span>
         )}
       </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="lp-beneficiary">Beneficiary <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
+          <button
+            type="button"
+            onClick={() => setAddressBookOpen(true)}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            title="Open address book"
+          >
+            <BookUser className="h-3.5 w-3.5" />
+            Address Book
+          </button>
+        </div>
+        <Input
+          id="lp-beneficiary"
+          placeholder={address ?? "G… — defaults to your wallet"}
+          value={beneficiaryOverride}
+          onChange={(e) => setBeneficiaryOverride(e.target.value)}
+          className={beneficiaryOverride && !isValidStellarAddress(beneficiaryOverride) ? "border-destructive" : ""}
+        />
+        <p className="text-xs text-muted-foreground">Leave blank to use your connected wallet as beneficiary.</p>
+      </div>
+      {addressBookOpen && (
+        <AddressBookModal
+          onSelect={(entry) => setBeneficiaryOverride(entry.address)}
+          onClose={() => setAddressBookOpen(false)}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="lp-unlock">{t("lpForm.unlockDate")}</Label>
