@@ -24,6 +24,9 @@ import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
 import { isValidStellarAddress, isValidStellarContractAddress } from "@/lib/stellar"
 import { CostEstimate } from "@/components/locks/CostEstimate"
 import { MultiBeneficiaryFields } from "@/components/locks/MultiBeneficiaryFields"
+import { createLogger } from "@/lib/logger"
+
+const log = createLogger("CreateTokenLockForm")
 
 const DAY = 86_400_000
 
@@ -258,7 +261,7 @@ export function CreateTokenLockForm() {
       setCooldownRemaining(COOLDOWN_SECONDS)
       navigate(`/app/lock/${id}`)
     } catch (err: unknown) {
-      console.error("[createLock error]", err)
+      log.error("[createLock error]", err)
       setShowConfirm(false)
       setError(formatError(err))
     } finally {
@@ -280,7 +283,7 @@ export function CreateTokenLockForm() {
       )
       trackEvent("token_approve")
     } catch (err: unknown) {
-      console.error("[approve error]", err)
+      log.error("[approve error]", err)
       if (err instanceof Error) {
         setError(err.message)
       } else if (typeof err === "object" && err !== null) {
