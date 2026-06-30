@@ -21,6 +21,9 @@ import { MultiBeneficiaryFields } from "@/components/locks/MultiBeneficiaryField
 import { CostEstimate } from "@/components/locks/CostEstimate"
 import { AddressBookModal } from "@/components/ui/AddressBookModal"
 import { BookUser } from "lucide-react"
+import { createLogger } from "@/lib/logger"
+
+const log = createLogger("CreateLpLockForm")
 
 const DAY = 86_400_000
 
@@ -153,7 +156,7 @@ export function CreateLpLockForm() {
       trackEvent("lock_create_lp", { dex })
       navigate(`/app/lock/${id}`)
     } catch (err: unknown) {
-      console.error("[createLpLock error]", err)
+      log.error("[createLpLock error]", err)
       setShowConfirm(false)
       if (err instanceof Error) {
         setError(err.message)
@@ -181,7 +184,7 @@ export function CreateLpLockForm() {
       )
       trackEvent("token_approve")
     } catch (err: unknown) {
-      console.error("[approve error]", err)
+      log.error("[approve error]", err)
     } finally {
       setApproving(false)
     }
