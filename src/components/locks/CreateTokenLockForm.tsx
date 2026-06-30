@@ -358,6 +358,9 @@ export function CreateTokenLockForm() {
           value={beneficiary}
           onChange={(e) => setBeneficiary(e.target.value)}
           aria-invalid={!!trimmedBeneficiary && !beneficiaryValid}
+        />
+      </div>
+
       {/* Multiple beneficiaries toggle */}
       <label className={cn(
         "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
