@@ -24,6 +24,11 @@ import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
 import { isValidStellarAddress, isValidStellarContractAddress } from "@/lib/stellar"
 import { CostEstimate } from "@/components/locks/CostEstimate"
 import { MultiBeneficiaryFields } from "@/components/locks/MultiBeneficiaryFields"
+import { AddressBookModal } from "@/components/ui/AddressBookModal"
+import { BookUser } from "lucide-react"
+import { createLogger } from "@/lib/logger"
+
+const log = createLogger("CreateTokenLockForm")
 
 const DAY = 86_400_000
 
@@ -63,6 +68,7 @@ export function CreateTokenLockForm() {
   ])
   const [cooldownRemaining, setCooldownRemaining] = useState(0)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [addressBookOpen, setAddressBookOpen] = useState(false)
 
   const COOLDOWN_SECONDS = 60
   const COOLDOWN_KEY = "stellarlock:last_lock_created_at"
@@ -225,9 +231,11 @@ export function CreateTokenLockForm() {
           signTransaction,
         )
         trackEvent("lock_create_split", { count: splitBeneficiaries.length, vesting })
+        localStorage.setItem(COOLDOWN_KEY, String(Date.now()))
+        setCooldownRemaining(COOLDOWN_SECONDS)
         navigate("/app/locks")
       } else {
-        const { id } = await createTokenLock(
+        const { id, txHash } = await createTokenLock(
           {
             tokenAddress: tokenAddress.trim(),
             amount: Number(amount),
@@ -237,28 +245,28 @@ export function CreateTokenLockForm() {
           },
           address!,
           signTransaction,
+          setTxPhase,
         )
         trackEvent("lock_create_token", { vesting })
-        navigate(`/app/lock/${id}`)
+        localStorage.setItem(COOLDOWN_KEY, String(Date.now()))
+        setCooldownRemaining(COOLDOWN_SECONDS)
+        navigate("/app/lock-created", {
+          state: {
+            lockId: id,
+            lockKind: "token",
+            txHash,
+            tokenAddress: tokenAddress.trim(),
+            amount,
+            beneficiary: beneficiary.trim() || address!,
+            creator: address!,
+            unlockAt: unlockTs,
+            vesting,
+            timestamp: Date.now(),
+          },
+        })
       }
-      const { id } = await createTokenLock(
-        {
-          tokenAddress: tokenAddress.trim(),
-          amount: Number(amount),
-          beneficiary: beneficiary.trim() || address!,
-          unlockAt: Math.floor(unlockTs / 1000),
-          vesting: vesting ? { start: Math.floor(Date.now() / 1000), end: Math.floor(unlockTs / 1000) } : undefined,
-        },
-        address!,
-        signTransaction,
-        setTxPhase,
-      )
-      trackEvent("lock_create_token", { vesting })
-      localStorage.setItem(COOLDOWN_KEY, String(Date.now()))
-      setCooldownRemaining(COOLDOWN_SECONDS)
-      navigate(`/app/lock/${id}`)
     } catch (err: unknown) {
-      console.error("[createLock error]", err)
+      log.error("[createLock error]", err)
       setShowConfirm(false)
       setError(formatError(err))
     } finally {
@@ -280,7 +288,7 @@ export function CreateTokenLockForm() {
       )
       trackEvent("token_approve")
     } catch (err: unknown) {
-      console.error("[approve error]", err)
+      log.error("[approve error]", err)
       if (err instanceof Error) {
         setError(err.message)
       } else if (typeof err === "object" && err !== null) {
@@ -356,6 +364,9 @@ export function CreateTokenLockForm() {
           value={beneficiary}
           onChange={(e) => setBeneficiary(e.target.value)}
           aria-invalid={!!trimmedBeneficiary && !beneficiaryValid}
+        />
+      </div>
+
       {/* Multiple beneficiaries toggle */}
       <label className={cn(
         "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
@@ -380,7 +391,18 @@ export function CreateTokenLockForm() {
         <MultiBeneficiaryFields beneficiaries={splitBeneficiaries} onChange={setSplitBeneficiaries} />
       ) : (
         <div className="flex flex-col gap-2">
-          <Label htmlFor="beneficiary">{t("tokenForm.beneficiary")}</Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="beneficiary">{t("tokenForm.beneficiary")}</Label>
+            <button
+              type="button"
+              onClick={() => setAddressBookOpen(true)}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              title="Open address book"
+            >
+              <BookUser className="h-3.5 w-3.5" />
+              Address Book
+            </button>
+          </div>
           <Input
             id="beneficiary"
             placeholder={address ?? "G…"}
@@ -389,6 +411,12 @@ export function CreateTokenLockForm() {
           />
           <p className="text-xs text-muted-foreground">{t("tokenForm.beneficiaryHint")}</p>
         </div>
+      )}
+      {addressBookOpen && (
+        <AddressBookModal
+          onSelect={(entry) => setBeneficiary(entry.address)}
+          onClose={() => setAddressBookOpen(false)}
+        />
       )}
 
       <div className="flex flex-col gap-2">

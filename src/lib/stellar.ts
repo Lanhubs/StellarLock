@@ -11,6 +11,11 @@ import {
   xdr,
 } from "@stellar/stellar-sdk"
 
+import { getContractAddress } from "@/lib/contracts.generated"
+import { createLogger } from "@/lib/logger"
+
+const log = createLogger("stellar")
+
 const envNetwork = (import.meta.env.VITE_NETWORK || "testnet").toLowerCase()
 const isMainnet = envNetwork === "mainnet" || envNetwork === "public"
 
@@ -31,12 +36,8 @@ export const NETWORK = {
 }
 
 export const CONTRACTS = {
-  tokenLocker:
-    import.meta.env.VITE_TOKEN_LOCKER_CONTRACT || import.meta.env.VITE_TOKEN_LOCKER_ID ||
-    "CBFCKEOQRQIXKLGU4QBUQVOINOKFBOXJ37LXEKLKNUO6TW4FNGDU26AW",
-  lpLocker:
-    import.meta.env.VITE_LP_LOCKER_CONTRACT || import.meta.env.VITE_LP_LOCKER_ID ||
-    "CA3WYETNIF5IAF3VUNQ3SYKZFV45TOFBF7CEZ46I7QEBPWTRM73WLEI4",
+  tokenLocker: getContractAddress("token-locker"),
+  lpLocker: getContractAddress("lp-locker"),
 }
 
 // Soroban transactions need a higher base fee than classic Stellar
@@ -188,7 +189,7 @@ export async function simulateCall<T>(contractId: string, method: string, args: 
   const dummySource = {
     accountId: () => "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN",
     sequenceNumber: () => "0",
-    incrementSequenceNumber: () => {},
+    incrementSequenceNumber: () => { },
   }
 
   const contract = new Contract(contractId)
@@ -201,7 +202,7 @@ export async function simulateCall<T>(contractId: string, method: string, args: 
     .build()
 
   const result = await client.simulate(tx)
-  if (import.meta.env.DEV) console.log("[simulateCall]", method, result)
+  log.debug("[simulateCall]", { method, result })
 
   if (SorobanRpc.Api.isSimulationError(result)) {
     throw new Error(`Simulation error: ${simError(result)}`)
@@ -220,9 +221,8 @@ export async function submitCall<T = void>(
   args: xdr.ScVal[],
   sourceAddress: string,
   signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
-): Promise<T> {
   onProgress?: (phase: TxPhase) => void,
-): Promise<void> {
+): Promise<T> {
   const rpc = getRpc()
   const account = await rpc.getAccount(sourceAddress)
   const contract = new Contract(contractId)
@@ -237,7 +237,7 @@ export async function submitCall<T = void>(
 
   onProgress?.("simulating")
   const simResult = await rpc.simulateTransaction(tx)
-  if (import.meta.env.DEV) console.log("[submitCall sim]", method, simResult)
+  log.debug("[submitCall sim]", { method, simResult })
 
   if (SorobanRpc.Api.isSimulationError(simResult)) {
     throw new Error(`Simulation error: ${simError(simResult)}`)
@@ -250,7 +250,7 @@ export async function submitCall<T = void>(
 
   onProgress?.("submitting")
   const sendResult = await rpc.sendTransaction(TransactionBuilder.fromXDR(signedTxXdr, NETWORK.passphrase))
-  if (import.meta.env.DEV) console.log("[submitCall send]", sendResult)
+  log.debug("[submitCall send]", { sendResult })
 
   if (sendResult.status === "ERROR") {
     throw new Error(`Send error: ${sendResult.errorResult?.toXDR("base64") ?? "unknown"}`)
@@ -269,7 +269,7 @@ export async function submitCall<T = void>(
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
     getResult = await rpc.getTransaction(sendResult.hash)
   }
-  if (import.meta.env.DEV) console.log("[submitCall result]", getResult)
+  log.debug("[submitCall result]", { getResult })
 
   if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
     throw new Error(`Transaction failed: ${JSON.stringify(getResult)}`)
@@ -280,6 +280,71 @@ export async function submitCall<T = void>(
   }
 
   return undefined as T
+}
+
+// ── submitCallWithHash — like submitCall but also returns the tx hash ─────────
+
+/** Same as submitCall, but additionally returns the transaction hash. */
+export async function submitCallWithHash<T = void>(
+  contractId: string,
+  method: string,
+  args: xdr.ScVal[],
+  sourceAddress: string,
+  signTransaction: (xdr: string) => Promise<{ signedTxXdr: string }>,
+  onProgress?: (phase: TxPhase) => void,
+): Promise<{ result: T; txHash: string }> {
+  const rpc = getRpc()
+  const account = await rpc.getAccount(sourceAddress)
+  const contract = new Contract(contractId)
+
+  const tx = new TransactionBuilder(account, {
+    fee: SOROBAN_FEE,
+    networkPassphrase: NETWORK.passphrase,
+  })
+    .addOperation(contract.call(method, ...args))
+    .setTimeout(30)
+    .build()
+
+  onProgress?.("simulating")
+  const simResult = await rpc.simulateTransaction(tx)
+
+  if (SorobanRpc.Api.isSimulationError(simResult)) {
+    throw new Error(`Simulation error: ${simError(simResult)}`)
+  }
+
+  const preparedTx = SorobanRpc.assembleTransaction(tx, simResult).build()
+
+  onProgress?.("signing")
+  const { signedTxXdr } = await signTransaction(preparedTx.toXDR())
+
+  onProgress?.("submitting")
+  const sendResult = await rpc.sendTransaction(TransactionBuilder.fromXDR(signedTxXdr, NETWORK.passphrase))
+
+  if (sendResult.status === "ERROR") {
+    throw new Error(`Send error: ${sendResult.errorResult?.toXDR("base64") ?? "unknown"}`)
+  }
+
+  const txHash = sendResult.hash
+
+  invalidateRpcCache()
+
+  onProgress?.("confirming")
+  const MAX_POLL_ATTEMPTS = 40
+  let getResult = await rpc.getTransaction(txHash)
+  for (let attempts = 0; getResult.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND; attempts++) {
+    if (attempts >= MAX_POLL_ATTEMPTS) {
+      throw new Error(`Transaction ${txHash} not found after ${MAX_POLL_ATTEMPTS} attempts (~60s)`)
+    }
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
+    getResult = await rpc.getTransaction(txHash)
+  }
+
+  if (getResult.status === SorobanRpc.Api.GetTransactionStatus.FAILED) {
+    throw new Error(`Transaction failed: ${JSON.stringify(getResult)}`)
+  }
+
+  const result = getResult.returnValue ? (scValToNative(getResult.returnValue) as T) : (undefined as T)
+  return { result, txHash }
 }
 
 // ── Address helpers ─────────────────────────────────────────────────────────
@@ -295,6 +360,8 @@ export function isValidStellarPublicKey(address: string): boolean {
 export function isValidStellarAddress(address: string): boolean {
   const trimmed = address.trim()
   return StrKey.isValidEd25519PublicKey(trimmed) || StrKey.isValidContract(trimmed)
+}
+
 // ── Cost estimation ───────────────────────────────────────────────────────────
 
 export interface LockCostEstimate {
@@ -313,9 +380,11 @@ export async function estimateLockCost(
   const dummySource = {
     accountId: () => "GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN",
     sequenceNumber: () => "0",
-    incrementSequenceNumber: () => {},
+    incrementSequenceNumber: () => { },
   }
 
+    const result = await rpc.simulateTransaction(tx)
+    log.debug("[estimateLockCost]", { method, result })
   const contract = new Contract(contractId)
   const tx = new TransactionBuilder(dummySource, {
     fee: BASE_FEE,

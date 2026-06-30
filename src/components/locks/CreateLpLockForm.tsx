@@ -17,7 +17,13 @@ import { trackEvent } from "@/lib/analytics"
 import { CONTRACTS, type TxPhase } from "@/lib/stellar"
 import { ConfirmLockModal } from "@/components/locks/ConfirmLockModal"
 import { isValidStellarContractAddress, isValidStellarPublicKey } from "@/lib/stellar"
+import { MultiBeneficiaryFields } from "@/components/locks/MultiBeneficiaryFields"
 import { CostEstimate } from "@/components/locks/CostEstimate"
+import { AddressBookModal } from "@/components/ui/AddressBookModal"
+import { BookUser } from "lucide-react"
+import { createLogger } from "@/lib/logger"
+
+const log = createLogger("CreateLpLockForm")
 
 const DAY = 86_400_000
 
@@ -41,6 +47,8 @@ export function CreateLpLockForm() {
   const [description, setDescription] = useState("")
   const [projectUrl, setProjectUrl] = useState("")
   const [logoUrl, setLogoUrl] = useState("")
+  const [beneficiaryOverride, setBeneficiaryOverride] = useState("")
+  const [addressBookOpen, setAddressBookOpen] = useState(false)
 
   const dexes: { value: Dex; label: string; desc: string }[] = [
     { value: "aquarius", label: t("lpForm.aquarius"), desc: t("lpForm.aquariusDesc") },
@@ -120,7 +128,7 @@ export function CreateLpLockForm() {
     setUnlockDate(new Date(Date.now() + days * DAY).toISOString().slice(0, 10))
   }
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault()
     if (!valid) return
     setError(null)
@@ -148,7 +156,7 @@ export function CreateLpLockForm() {
       trackEvent("lock_create_lp", { dex })
       navigate(`/app/lock/${id}`)
     } catch (err: unknown) {
-      console.error("[createLpLock error]", err)
+      log.error("[createLpLock error]", err)
       setShowConfirm(false)
       if (err instanceof Error) {
         setError(err.message)
@@ -176,7 +184,7 @@ export function CreateLpLockForm() {
       )
       trackEvent("token_approve")
     } catch (err: unknown) {
-      console.error("[approve error]", err)
+      log.error("[approve error]", err)
     } finally {
       setApproving(false)
     }
@@ -293,6 +301,35 @@ export function CreateLpLockForm() {
       </div>
 
       <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="lp-beneficiary">Beneficiary <span className="text-xs font-normal text-muted-foreground">(optional)</span></Label>
+          <button
+            type="button"
+            onClick={() => setAddressBookOpen(true)}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            title="Open address book"
+          >
+            <BookUser className="h-3.5 w-3.5" />
+            Address Book
+          </button>
+        </div>
+        <Input
+          id="lp-beneficiary"
+          placeholder={address ?? "G… — defaults to your wallet"}
+          value={beneficiaryOverride}
+          onChange={(e) => setBeneficiaryOverride(e.target.value)}
+          className={beneficiaryOverride && !isValidStellarAddress(beneficiaryOverride) ? "border-destructive" : ""}
+        />
+        <p className="text-xs text-muted-foreground">Leave blank to use your connected wallet as beneficiary.</p>
+      </div>
+      {addressBookOpen && (
+        <AddressBookModal
+          onSelect={(entry) => setBeneficiaryOverride(entry.address)}
+          onClose={() => setAddressBookOpen(false)}
+        />
+      )}
+
+      <div className="flex flex-col gap-2">
         <Label htmlFor="lp-unlock">{t("lpForm.unlockDate")}</Label>
         <Input
           id="lp-unlock"
@@ -383,6 +420,17 @@ export function CreateLpLockForm() {
             </>
           )}
         </span>
+      </div>
+
+      <div aria-live="polite" aria-atomic="true">
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          >
+            {error}
+          </div>
+        )}
       </div>
 
       <CostEstimate
